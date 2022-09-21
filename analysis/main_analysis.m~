@@ -83,16 +83,10 @@ norm_rl = normalize_matrix(corr_rl);
 [ll_cc, ll_cp, ll_preCGcc, ll_preCGcb] = graphparam1(norm_ll);
 [rl_cc, rl_cp, rl_preCGcc, rl_preCGcb] = graphparam1(norm_rl);
 
-%% Statistical analyses
+%% Statistical analysis
 
-
-%% Save data for visualizations in Python
-
+%% Save for visualizations in Python
 fn_results = [dir_main, '/results/fc_graph_data.mat'];
-save(fn_results,pat_fcwb,pat_fch,pat_cc, pat_cp, pat_preCGcc, pat_preCGcb,...
-                con_fcwb,con_fch,con_cc, con_cp, con_preCGcc, con_preCGcb,...
-                ll_fcwb,ll_fch,ll_cc, ll_cp, ll_preCGcc, ll_preCGcb,...
-                rl_fcwb,rl_fch,rl_cc, rl_cp, rl_preCGcc, rl_preCGcb)
- 
+save fn_results fcwb_pat fch_pat 
 
 
