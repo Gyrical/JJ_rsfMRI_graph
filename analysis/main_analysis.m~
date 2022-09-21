@@ -11,7 +11,7 @@ dir_main = fileparts(pwd);
 %% Load data
 
 fn_patients = dir([dir_main, '/data/patients/*.mat']);
-tc_patients = cell(length(fn_controls),1);
+tc_patients = cell(length(fn_patients),1);
 for idx = 1:length(fn_patients)
     tc_patients(idx) = struct2cell(load([fn_patients(idx).folder,'/',fn_patients(idx).name]));
 end
@@ -78,15 +78,21 @@ norm_rl = normalize_matrix(corr_rl);
 
 %% Calculate graph parameters
 
-[pat_cc, pat_cp, pat_preCGcc, pat_preCGcb] = graphparam1(norm_pat);
+[pat_cc, pat_cp, pat_preCGcc, pat_preCGcb] = calculate_graphparams(norm_pat);
 [con_cc, con_cp, con_preCGcc, con_preCGcb] = calculate_graphparams(norm_con);
-[ll_cc, ll_cp, ll_preCGcc, ll_preCGcb] = graphparam1(norm_ll);
-[rl_cc, rl_cp, rl_preCGcc, rl_preCGcb] = graphparam1(norm_rl);
+[ll_cc, ll_cp, ll_preCGcc, ll_preCGcb] = calculate_graphparams(norm_ll);
+[rl_cc, rl_cp, rl_preCGcc, rl_preCGcb] = calculate_graphparams(norm_rl);
 
-%% Statistical analysis
+%% Statistical analyses
 
-%% Save for visualizations in Python
+
+%% Save data for visualizations in Python
+
 fn_results = [dir_main, '/results/fc_graph_data.mat'];
-save fn_results fcwb_pat fch_pat 
+save(fn_results,'pat_fcwb','pat_fch','pat_cc','pat_cp','pat_preCGcc','pat_preCGcb',...
+                con_fcwb,con_fch,con_cc, con_cp, con_preCGcc, 'con_preCGcb',...
+                ll_fcwb,ll_fch,ll_cc, ll_cp, ll_preCGcc, ll_preCGcb,...
+                rl_fcwb,rl_fch,rl_cc, rl_cp, rl_preCGcc, rl_preCGcb)
+ 
 
 
