@@ -11,3 +11,4 @@ Folders:
   - SPM12 preprocessing and job scripts for the healthy controls (Script\_control\*.m) and the stroke patients (Script\_mpi\*.m for scans acquired at the Max Planck Institute, and Script_ukt*.m for scans acquired at the Universitaetsklinikum Tuebingen)
  - analysis
    - Custom MATLAB scripts for the calculation of the graph metrics
+   - functions
