@@ -1,5 +1,5 @@
 %% March 2014 Jessica Jesser
-% September 2022, Edited by Tianlu Wang
+% September 2022, edited by Tianlu Wang
 %% Prune Matrix
 %
 % Description: thresholding of normalized matrix for different values of
@@ -14,14 +14,14 @@
       
 function [pruned_matrix,t] = prune(matrix, sparse)
 N = size(matrix,1);
-t = round((1-sparse) * (N^2-N) * .5); % CHECK
+t = round((1-sparse) * (N^2-N) * .5); % >>> Jessica: changed code here to only consider number of nodes in the lower triangle
 pruned_matrix = zeros(size(matrix));
 
 for subj = 1:size(matrix,3)
     M = zeros(N,N);
     
     % Prune matrix
-    half_matrix = tril(matrix(:,:,subj),-1); % lower half of matrix, because matrix is symmetrical
+    half_matrix = tril(matrix(:,:,subj),-1); 
     [sorted_vector,sorted_index] = sort(half_matrix(:),'descend');
     for k = 1:t          
         M(sorted_index(k)) = sorted_vector(k);
@@ -31,16 +31,16 @@ for subj = 1:size(matrix,3)
     % Check that the mean degree is bigger than log(nodes)
     mean_deg = mean(degrees_und(pruned_matrix(:,:,subj)));
     log_nodes =  log(size(matrix,1));
-    fprintf('mean degree: %f\nlog nodes:%f\n',mean_deg,log_nodes)
+%     fprintf('mean degree: %f\nlog nodes:%f\n',mean_deg,log_nodes) % Uncomment this line to show degree and log nodes per subject
     if mean_deg < log_nodes
         error('mean degree is not bigger than log(nodes)');
     end
     
     % Check for matrix symmetry
-    if issymmetric(pruned_matrix(:,:,subj))
-        disp('matrix is symmetrical')
-    else
+    if not(issymmetric(pruned_matrix(:,:,subj)))
         error('matrix is not symmetrical!')
+%     else % Uncomment this and next line to print confirmation of symmetry
+%         disp('matrix is symmetrical') 
     end
     
     

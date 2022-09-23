@@ -5,21 +5,22 @@ Created on Tue Feb 22 08:17:33 2022
 
 @author: tianlu
 """
-
+import os
 import numpy as np
 import numpy.matlib
-import matplotlib.pyplot as plt
-from matplotlib import cm
-import seaborn as sns
 import pandas as pd
+import scipy.io
 import scipy.interpolate
 from scipy.stats import pearsonr
-import scipy.io
+from matplotlib import cm
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load data
-# D = scipy.io.loadmat('fc_graph_data.mat')
-D = scipy.io.loadmat('/home/tianlu/OneDrive/Projects/202112_Jesser_thesis/Code_Data_Sharing/analysis/matlab.mat')
-lesionsize = []#scipy.io.loadmat('lesionsize.mat')
+dir_main = os.path.realpath(os.path.join(os.path.dirname(__file__),'..'))
+D = scipy.io.loadmat(dir_main+'/results/fc_graph_data.mat')
+Dstats = scipy.io.loadmat(dir_main+'/results/fc_graph_stats.mat')
+lesionsize = scipy.io.loadmat(dir_main+'/data/patients/lesionsize.mat')['lesionsize'].flatten()
 
 # Study settings
 sparsl = np.arange(0.1,0.95,0.05) 
@@ -34,7 +35,7 @@ pltmarkers = ['^','o','<','>'] # SP HC LL RL
 sublabs  = ['A','','B','','C',''] # sublabs  = 'A B C D E F'.split()
 sublfont = {'fontsize':14,'fontweight':'bold','fontname':'Arial'}
 legendst = {'bbox_to_anchor':(1.01, 1),'frameon':False}
-legendsts = {'bbox_to_anchor':(1.01, 0.95),'frameon':False}
+legendsts = {'bbox_to_anchor':(1.01, 1.01),'frameon':False} # 0.95
 scatterst = {'s':30,'zorder':3,'label':'_nolegend_'}
 signst1 = {'ha':'center','va':'bottom','fontsize':14}
 signst2 = {'ha':'center','va':'baseline','fontsize':14}
@@ -42,17 +43,20 @@ plt.rcParams['font.sans-serif'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 
 # Stats settings
-sstats = 0#True
-pchoic = 1 # 1: uncorrected, 3: bonferroni, 5: fdr
+sstats = True
+# pchoic = 1 # 1: uncorrected, 3: bonferroni, 5: fdr
 
 
 #%% Fig 2 (2-3) Combined SP vs. HC
     
-statsm = [['*' if x<.05 else '' for x in D['stats_all_'+xx][5,:]] for xx in 'cc cp pcc pcb'.split()] # else '^' if x<.1
+statsm = [['*' if p<.05 else '' for p in Dstats['stats_all_'+x].flatten()] for x in measl[:4]]
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
 for idxm,labm in enumerate(measl):
     ax = axes.flatten()[idxm]
+    
+    # ------------------------------------------------------------------------------
+    # Show graph measures
     
     if idxm<4:
         
@@ -93,11 +97,11 @@ for idxm,labm in enumerate(measl):
         ax.set_xticklabels(['{:.2f}'.format(x) for x in sparsl[::2]])
         ax.set_xlabel('sparsity')
         
-# ------------------------------------------------------------------------------
-# Show FC
-
+    # ------------------------------------------------------------------------------
+    # Show FC
+    
     else:
-        x = np.arange(1,3)  
+        
         # Prepare data
         data = [[x for x in np.squeeze(D[groupl[0]+'_'+labm]) if x not in [np.nan,np.inf]],
                 [x for x in np.squeeze(D[groupl[1]+'_'+labm]) if x not in [np.nan,np.inf]]]
@@ -107,6 +111,7 @@ for idxm,labm in enumerate(measl):
         for idxv,v in enumerate(violins['bodies']): v.set_facecolor(pltcolors[idxv])
         
         qmq=np.asarray([np.percentile(x,[50,25,75]) for x in data])
+        x = np.arange(1,3)
         for idx in range(2):
             ax.scatter(x[idx],qmq[idx,0],marker='o',color='white',**scatterst) # pltmarkers[idx]
             ax.plot([idx+1,idx+1],qmq[idx,(1,2)],color='k',label='_nolegend_') #pltcolors[idx]
@@ -125,13 +130,14 @@ for idxm,labm in enumerate(measl):
         ax.set_xticks([1,2])
         ax.set_xticklabels(labsgr[:2])
 
-    # General display settings
+    # Show subplot labels
     xls,yls = ax.get_xlim(), ax.get_ylim()
     ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
     
-    if idxm==1 or idxm==5: ax.legend(labsgr[:2],**legendsts)
-    # if idxm==5: ax.legend(labsgr[:2],**legendst)
+    # Set legend location
+    if idxm==1 or idxm==5: ax.legend(labsgr[:2],loc='upper left',**legendsts)
      
+    # General display settings
     ax.set_ylabel(labsgm[idxm])           
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
@@ -146,8 +152,8 @@ plt.show()
 #%% Figure 3 (4-5) combined LL vs. RL vs. HC
 
 slabs = ['$LL ≠ RL$','$LL ≠ HC$','$RL ≠ HC$']
-statsma = []#[[['*' if x<.05 else '' for x in D['stats_{}_{}'.format(xx,yy)][1,:]] 
-              # for xx in 'dom_nondom dom nondom'.split()] for yy in 'cc cp pcc pcb'.split()] # else '^' if x<.1 
+statsma = [[['*' if x<.05 else '' for x in Dstats['stats_{}_{}'.format(xx,yy)]] 
+               for xx in 'll_rl con_ll con_rl'.split()] for yy in measl[:4]] # else '^' if x<.1 
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
 for idxm,labm in enumerate(measl):
@@ -251,8 +257,12 @@ plt.show()
 
 #%% Figure 4 with correlations
 import re
+
 if 1:
-    # option 1: show single sparsity
+    # Option 1: show single sparsity
+
+    spars = 0.75
+    
     fig,axes = plt.subplots(3,2,figsize=(8,9))
     
     for idxm,labm in enumerate(measl):
@@ -260,19 +270,16 @@ if 1:
         
         # Prepare data
         if idxm>3: data = D['pat_'+labm].flatten()
-        else: data = D['pat_'+labm][:,np.where(np.isclose(sparsl,0.75))[0][0]].flatten() # 4: 0.75
+        else: data = D['pat_'+labm][:,np.where(np.isclose(sparsl,spars))[0][0]].flatten() 
         
         # Plot
-        if 1:    
-            ldata = pd.DataFrame({'data':data,'lesionsize':lesionsize})
-            g = sns.regplot(x='lesionsize',y='data',data=ldata,ax=ax,marker='^',color=pltcolors[0])
-            ax.set_xlim([-10,370])
-        else:
-            ax.scatter(lesionsize,data,marker=pltmarkers[0],c=pltcolors[0])
-            ax.plot([np.min(lesionsize),np.max(lesionsize)],[np.mean(data)])
+        ldata = pd.DataFrame({'data':data,'lesionsize':lesionsize})
+        g = sns.regplot(x='lesionsize',y='data',data=ldata,ax=ax,marker='^',color=pltcolors[0])
+        ax.set_xlim([-10,370])
+
     
         xls,yls = ax.get_xlim(), ax.get_ylim()
-        if idxm<4: ax.text(xls[0]+np.diff(xls)*0.05,yls[1],'$sparsity = 0.75$',ha='left',va='bottom',fontsize=8)
+        if idxm<4: ax.text(xls[0]+np.diff(xls)*0.05,yls[1],'$sparsity = {:.2f}$'.format(spars),ha='left',va='bottom',fontsize=8)
             
         # plot stats text
         if sstats:
@@ -290,9 +297,9 @@ if 1:
         ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
 
 
-# Option 2: show all sparsities
-
 else:
+    # Option 2: show all sparsities
+
     cmap = np.flip(cm.get_cmap('Purples')(np.arange(0.2,1,0.1)),axis=0)
     
     # Prepare data

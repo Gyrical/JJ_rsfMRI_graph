@@ -1,7 +1,7 @@
-%% functional connectivity
-%% Jessica Jesser
-%% January 2015, modification October 2015
-%% September 2022, edited by Tianlu Wang
+%% January 2015 Jessica Jesser, modification October 2015
+%  September 2022, edited by Tianlu Wang
+%% Functional connectivity
+%
 % Description: calculate the whole brain FC and homotopic FC from full
 % connectivity matrices
 %
@@ -30,8 +30,7 @@ n_subj = size(X,3);
 fcwb = zeros(n_subj,1);
 for subj = 1:n_subj
     mat = X(:,:,subj);
-    %fcwb(subj) = mean(nonzeros(tril(X(:,:,subj),-1)));
-    fcwb(subj) = mean(mat(tril(ones(n_nodes),-1)==1));
+    fcwb(subj) = mean(mat(tril(ones(n_nodes),-1)==1)); % >>> Jessica: changed the code here to also include non-diagonal zeros in the lower triangle
 end
 
 % Average FC between homotopic regions

@@ -22,6 +22,7 @@
 %%
 
 function [cc, cp, preCGcc, preCGcb] = calculate_graphparams(matrix)
+
 % Settings
 idxPreCG = 1;
 sparsity = 0.1:0.05:0.9;
@@ -44,12 +45,12 @@ for subj = 1:n_subj
         cluster_coef = clustering_coef_wu(pruned_matrix);
         cc(subj,spars) = mean(cluster_coef);
         
-        % Calculate PreCG clustering coefficient - note: contralesional PreCG index=1, lesioned Precg index=116
+        % Calculate PreCG clustering coefficient 
         preCGcc(subj,spars) = cluster_coef(idxPreCG)/mean(cluster_coef);
 
         % Calculate characteristic path with the distance matrix
         cp(subj,spars) = charpath(conv_matrix);
-        cp(subj,spars) = charpath(conv_matrix,0,0); % CHECK
+        cp(subj,spars) = charpath(conv_matrix,0,0); % >>> Jessica: changed here to ignore Inf pl for disconnected graphs
         
         % Calculate PreCG betweenness centrality with the distance matrix
         cb = betweenness_wei(conv_matrix);

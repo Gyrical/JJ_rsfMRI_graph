@@ -6,7 +6,7 @@ Run:
 - /analysis/main_analysis.m
 - /results/manuscript_figures.py
 
-Folders:
+Content:
 - data
   - subfolders for controls and patients
   - *.mat files with arrays of size 116 ROIs x 100 volumes per subject
@@ -14,6 +14,6 @@ Folders:
   - SPM12 preprocessing and job scripts for the healthy controls (Script\_control\*.m) and the stroke patients (Script\_mpi\*.m for scans acquired at the Max Planck Institute, and Script_ukt*.m for scans acquired at the Universitaetsklinikum Tuebingen)
  - analysis
    - Custom MATLAB script for calculating connectivity and graph metrics, and performing statistics
-   - functions
+   - Custom functions
  - results
    - python script for visualizations
