@@ -1,4 +1,5 @@
 %% March 2014 Jessica Jesser
+% September 2022, Edited by Tianlu Wang
 %% Prune Matrix
 %
 % Description: thresholding of normalized matrix for different values of
@@ -12,49 +13,34 @@
 %%
       
 function [pruned_matrix,t] = prune(matrix, sparse)
-t = round((size(matrix,2).*size(matrix,2))-size(matrix,2)-(sparse.*(size(matrix,2).*(size(matrix,2))-size(matrix,2)))); %calculate number of edges to keep by sparsity
-pruned_matrix = zeros(size(matrix,1),size(matrix,2),size(matrix,3)); %output matrix
-for i = 1:(size(matrix,3))
-    M = zeros(size(matrix,1),size(matrix,2));
-    half_matrix = tril(matrix(:,:,i),-1); %lower half of matrix, because matrix is symmetrical
-    vector_matrix = half_matrix(:);
-    [sorted_vector,sorted_index] = sort(vector_matrix,'descend');
+N = size(matrix,1);
+t = round((1-sparse) * (N^2-N));
+pruned_matrix = zeros(size(matrix));
+
+for subj = 1:size(matrix,3)
+    
+    M = zeros(N,N);
+    half_matrix = tril(matrix(:,:,subj),-1); %lower half of matrix, because matrix is symmetrical
+    [sorted_vector,sorted_index] = sort(half_matrix(:),'descend');
     for k = 1:t          
         M(sorted_index(k)) = sorted_vector(k);
-    end;
-    pruned_matrix(:,:,i) = M+M'; % fill output matrix
+    end
+    pruned_matrix(:,:,subj) = M+M'; 
    
-    if mean(degrees_und(pruned_matrix(:,:,i))) < log(size(matrix,1)) %check for mean node degree is bigger than log(nodes)
-        disp('mean degree:'); 
-        disp (mean(degrees_und(pruned_matrix(:,:,i))));
-        disp('log(nodes):');
-        disp(log(size(matrix,1)));
+    % Check that the mean degree is bigger than log(nodes)
+    mean_deg = mean(degrees_und(pruned_matrix(:,:,subj)));
+    log_nodes =  log(size(matrix,1));
+    fprintf('mean degree: %f\nlog nodes:%f\n',mean_deg,log_nodes)
+    if mean_deg < log_nodes
         error('mean degree is not bigger than log(nodes)');
-    end;
-       for m = 1:size(pruned_matrix,1) % check for matrix symmetry
-           for n = 1:size(pruned_matrix,2)
-               for o = 1: size(pruned_matrix,3)
-                   if pruned_matrix(m,n,o) ~= pruned_matrix(n,m,o)
-                       disp('matrix is not symmetrical');
-                       error ('check matrix symmetry');
-                   end;
-               end;
-           end;
-       end;
-       
-       if mean(degrees_und(pruned_matrix(:,:,i))) > log(size(matrix,1)) %check for mean node degree is bigger than log(nodes)
-        disp('mean degree:'); 
-        disp (mean(degrees_und(pruned_matrix(:,:,i))));
-        disp('log(nodes):');
-        disp(log(size(matrix,1)));
-       end
-       for m = 1:size(pruned_matrix,1) % check for matrix symmetry
-           for n = 1:size(pruned_matrix,2)
-               for o = 1: size(pruned_matrix,3)
-                   if pruned_matrix(m,n,o) == pruned_matrix(n,m,o);
-                   end
-               end
-           end
-       end; disp('matrix is symmetrical');
-
+    end
+    
+    % Check for matrix symmetry
+    if issymmetric(pruned_matrix(:,:,subj))
+        disp('matrix is symmetrical')
+    else
+        error ('matrix is not symmetrical!')
+    end
+    
+    
 end    

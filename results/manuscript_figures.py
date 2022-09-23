@@ -20,7 +20,7 @@ import os
 
 # Load data and prepare settings
 Dj = scipy.io.loadmat('fc_graph_data.mat')
-
+input()
 # --- 220629 Jessica ---
 D = {'CCall_sp' : Dj['pat_all_cc'],
      'CCall_ll' : Dj['pat_dom_cc'],
