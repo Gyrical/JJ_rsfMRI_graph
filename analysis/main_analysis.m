@@ -12,6 +12,8 @@ clearvars; close all; clc
 dir_main = fileparts(pwd);
 fn_results = [dir_main, '/results/fc_graph_data.mat'];
 
+measures = {'fcwb','fch','cc','cp','preCGcc','preCGcb'};
+groups = {'pat','con','ll','rl'};
       
 %% Load data
 
@@ -79,8 +81,6 @@ pat_rl = {'XR_sub_133','XR_sub_546','XR_sub_563','XR_sub_176','XR_sub_048',...
 ll_idx = cellfun(@(x) find(strcmp(pat_all,x)),pat_ll);
 rl_idx = cellfun(@(x) find(strcmp(pat_all,x)),pat_rl);
 
-measures = {'fcwb','fch','cc','cp','preCGcc','preCGcb'};
-
 for idxm = 1:length(measures)
     meas = measures{idxm};
     data.(strcat('ll_',meas)) = data.(strcat('pat_',meas))(ll_idx);
@@ -98,8 +98,6 @@ save(fn_results,'-struct','data')
 
 % Initialization
 data = load(fn_results);
-measures = {'fcwb','fch','cc','cp','preCGcc','preCGcb'};
-groups = {'pat','con','ll','rl'};
 keys_all = fieldnames(data);
 keys_fc = keys_all(cellfun(@(x) contains(x,{'_fcwb','_fch'}),fieldnames(data)));
 keys_gm = keys_all(cellfun(@(x) contains(x,{'_cc','_cp','_preCGcc','_preCGcb'}),fieldnames(data)));
