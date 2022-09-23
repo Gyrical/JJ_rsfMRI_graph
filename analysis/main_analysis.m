@@ -97,7 +97,7 @@ end
 disp('Calculating network measures...')
 
 if exist(fn_data,'file')==2 
-    load(fn_data,'data')
+    data = load(fn_data);
 else
     data = struct();
 
@@ -136,7 +136,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initialization
-%data = load(fn_results);
+
 keys_all = fieldnames(data);
 keys_fc = keys_all(cellfun(@(x) contains(x,{'_fcwb','_fch'}),fieldnames(data)));
 keys_gm = keys_all(cellfun(@(x) contains(x,{'_cc','_cp','_preCGcc','_preCGcb'}),fieldnames(data)));
