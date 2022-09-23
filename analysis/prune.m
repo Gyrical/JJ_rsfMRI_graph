@@ -14,13 +14,14 @@
       
 function [pruned_matrix,t] = prune(matrix, sparse)
 N = size(matrix,1);
-t = round((1-sparse) * (N^2-N));
+t = round((1-sparse) * (N^2-N) * .5); % CHECK
 pruned_matrix = zeros(size(matrix));
 
 for subj = 1:size(matrix,3)
-    
     M = zeros(N,N);
-    half_matrix = tril(matrix(:,:,subj),-1); %lower half of matrix, because matrix is symmetrical
+    
+    % Prune matrix
+    half_matrix = tril(matrix(:,:,subj),-1); % lower half of matrix, because matrix is symmetrical
     [sorted_vector,sorted_index] = sort(half_matrix(:),'descend');
     for k = 1:t          
         M(sorted_index(k)) = sorted_vector(k);
@@ -39,7 +40,7 @@ for subj = 1:size(matrix,3)
     if issymmetric(pruned_matrix(:,:,subj))
         disp('matrix is symmetrical')
     else
-        error ('matrix is not symmetrical!')
+        error('matrix is not symmetrical!')
     end
     
     

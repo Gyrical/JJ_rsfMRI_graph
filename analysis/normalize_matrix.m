@@ -14,15 +14,18 @@
 function [norm_matrix] = normalize_matrix(matrix)
 
 norm_matrix = zeros(size(matrix));
-% replace negative values and main diagnoal by 0
-for i = 1:size(matrix,3)
-   mat = matrix(:,:,i);
-   ind = mat<0;
-   mat(ind) = 0;
-   norm_matrix(:,:,i) = mat;
+
+for subj = 1:size(matrix,3)
+    
+   mat = matrix(:,:,subj);
    
-   for j = 1:(size(matrix,1))
-         norm_matrix(j,j,i) = 0;
-   end
+   % Set negative values to zero
+   mat(mat<0) = 0;
+   
+   % Set main diagonal to 0
+   mat(eye(size(mat,1))==1) = 0;
+   
+   % Save
+   norm_matrix(:,:,subj) = mat;
    
 end

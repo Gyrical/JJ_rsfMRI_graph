@@ -49,6 +49,7 @@ for subj = 1:n_subj
 
         % Calculate characteristic path with the distance matrix
         cp(subj,spars) = charpath(conv_matrix);
+        cp(subj,spars) = charpath(conv_matrix,0,0); % CHECK
         
         % Calculate PreCG betweenness centrality with the distance matrix
         cb = betweenness_wei(conv_matrix);

@@ -1,7 +1,6 @@
 %% functional connectivity
 %% Jessica Jesser
 %% January 2015, modification October 2015
-
 %% September 2022, edited by Tianlu Wang
 % Description: calculate the whole brain FC and homotopic FC from full
 % connectivity matrices
@@ -23,19 +22,25 @@
 
 function [fcwb, fch] = calculate_fc(X)
 
-% FC of entire matrix
-fcwb = zeros(size(X,3),1);
-for idx = 1:size(X,3)
-    fcwb(idx) = mean(nonzeros(tril(X(:,:,idx),-1)));
+n_nodes = size(X,1);
+n_hom = 54;
+n_subj = size(X,3);
+
+% Average FC of lower triangle of symmetric connectivity matrix
+fcwb = zeros(n_subj,1);
+for subj = 1:n_subj
+    mat = X(:,:,subj);
+    %fcwb(subj) = mean(nonzeros(tril(X(:,:,subj),-1)));
+    fcwb(subj) = mean(mat(tril(ones(n_nodes),-1)==1));
 end
 
-% FC between homotopic regions
-fch = zeros(size(X,3),1);
-for idx = 1:size(X,3)
-    subj_fch = zeros(54,1);
-    for idxr = 1:54
-        subj_fch(idxr) = X(idxr,117-idxr,idx);
+% Average FC between homotopic regions
+fch = zeros(n_subj,1);
+for subj = 1:n_subj
+    subj_fch = zeros(n_hom,1);
+    for roi = 1:n_hom
+        subj_fch(roi) = X(roi,n_nodes-roi+1,subj);
     end
-    fch(idx) = mean(subj_fch);
+    fch(subj) = mean(subj_fch);
 end
 

@@ -12,6 +12,7 @@ clearvars; close all; clc
 dir_main = fileparts(pwd);
 fn_results = [dir_main, '/results/fc_graph_data.mat'];
 
+      
 %% Load data
 
 fn_patients = dir([dir_main, '/data/patients/*.mat']);
@@ -20,6 +21,7 @@ tc_pat = cell(length(fn_patients),1);
 for subj = 1:length(fn_patients)
     tc_pat(subj) = struct2cell(load([fn_patients(subj).folder,'/',fn_patients(subj).name]));
 end
+
 
 fn_controls = dir([dir_main, '/data/controls/*.mat']);
 fn_controls = table2struct(sortrows(struct2table(fn_controls)));
@@ -43,53 +45,47 @@ for subj = 1:length(tc_con)
     corr_con(:,:,subj) = corrcoef(tc_con{subj});
 end
 
-% Subgroups
-pat_ll = {'XR_sub_574_fl', 'XR_sub_089_fl','XR_sub_516_fl','XR_sub_533_fl','XR_sub_554_fl',...
-          'XR_sub_263_fl','XR_sub_523_fl','XR_sub_536_fl','XR_sub_612_fl','XR_sub_613_fl'};
-corr_ll = zeros(size(tc_pat{1},2),size(tc_pat{1},2),length(pat_ll));
-for subj = 1:length(pat_ll)
-    corr_ll(:,:,subj) = corrcoef(tc_pat{cellfun(@(x) strcmp(x,[pat_ll{subj},'.mat']), {fn_patients.name})});
-end
-
-pat_rl = {'XR_sub_133','XR_sub_546','XR_sub_563','XR_sub_176','XR_sub_048',...
-          'XR_sub_004','XR_sub_567','XR_sub_587','XR_sub_510','XR_sub_400'};
-corr_rl = zeros(size(tc_pat{1},2),size(tc_pat{1},2),length(pat_rl));
-for subj = 1:length(pat_rl)
-    corr_rl(:,:,subj) = corrcoef(tc_pat{cellfun(@(x) strcmp(x,[pat_rl{subj},'.mat']), {fn_patients.name})});
-end
-
 
 %% Process connectivity matrices
 
 % Fisher z-transform
-corr_pat = log((1+corr_pat)./(1-corr_pat))./2;
-corr_con = log((1+corr_con)./(1-corr_con))./2;
-corr_ll = log((1+corr_ll)./(1-corr_ll))./2;
-corr_rl = log((1+corr_rl)./(1-corr_rl))./2;
-
-% >>> Jessica: in normalize_matrix.m only negative and diagonal values are
-% set to 0 and NO normalization is performed, is this correct? <<<
+corr_pat_fi = log((1+corr_pat)./(1-corr_pat))./2;
+corr_con_fi = log((1+corr_con)./(1-corr_con))./2;
 
 % Normalize connectivity matrices
-norm_pat = normalize_matrix(corr_pat);
-norm_con = normalize_matrix(corr_con);
-norm_ll = normalize_matrix(corr_ll);
-norm_rl = normalize_matrix(corr_rl);
+norm_pat = normalize_matrix(corr_pat_fi);
+norm_con = normalize_matrix(corr_con_fi);
 
 
-%% Calculate whole-brain and homotopic functional connectivity
+%% Calculate network measures
+data = struct();
 
+% Calculate whole-brain and homotopic functional connectivity
 [data.pat_fcwb,data.pat_fch] = calculate_fc(norm_pat);
 [data.con_fcwb,data.con_fch] = calculate_fc(norm_con);
-[data.ll_fcwb,data.ll_fch] = calculate_fc(norm_ll);
-[data.rl_fcwb,data.rl_fch] = calculate_fc(norm_rl);
 
-%% Calculate graph parameters
-
+% Calculate graph parameters
 [data.pat_cc, data.pat_cp, data.pat_preCGcc, data.pat_preCGcb] = calculate_graphparams(norm_pat);
 [data.con_cc, data.con_cp, data.con_preCGcc, data.con_preCGcb] = calculate_graphparams(norm_con);
-[data.ll_cc, data.ll_cp, data.ll_preCGcc, data.ll_preCGcb] = calculate_graphparams(norm_ll);
-[data.rl_cc, data.rl_cp, data.rl_preCGcc, data.rl_preCGcb] = calculate_graphparams(norm_rl);
+
+
+%% Get subgroup data
+
+pat_all = cellfun(@(x) {x(1:end-4)},{fn_patients.name}); 
+pat_ll = {'XR_sub_574_fl', 'XR_sub_089_fl','XR_sub_516_fl','XR_sub_533_fl','XR_sub_554_fl',...
+          'XR_sub_263_fl','XR_sub_523_fl','XR_sub_536_fl','XR_sub_612_fl','XR_sub_613_fl'};
+pat_rl = {'XR_sub_133','XR_sub_546','XR_sub_563','XR_sub_176','XR_sub_048',...
+          'XR_sub_004','XR_sub_567','XR_sub_587','XR_sub_510','XR_sub_400'};
+ll_idx = cellfun(@(x) find(strcmp(pat_all,x)),pat_ll);
+rl_idx = cellfun(@(x) find(strcmp(pat_all,x)),pat_rl);
+
+measures = {'fcwb','fch','cc','cp','preCGcc','preCGcb'};
+
+for idxm = 1:length(measures)
+    meas = measures{idxm};
+    data.(strcat('ll_',meas)) = data.(strcat('pat_',meas))(ll_idx);
+    data.(strcat('rl_',meas)) = data.(strcat('pat_',meas))(rl_idx);
+end
 
 
 %% Save data for visualizations in Python
@@ -107,6 +103,8 @@ groups = {'pat','con','ll','rl'};
 keys_all = fieldnames(data);
 keys_fc = keys_all(cellfun(@(x) contains(x,{'_fcwb','_fch'}),fieldnames(data)));
 keys_gm = keys_all(cellfun(@(x) contains(x,{'_cc','_cp','_preCGcc','_preCGcb'}),fieldnames(data)));
+
+results = struct();
 
 %% Functional connectivity
 
@@ -191,6 +189,7 @@ end
 disp('One-way ANOVA test results patient subgroups vs. controls (per sparsity level):')
 disp(array2table(result_gm_anova','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
 
+%% Save results
 
 
 

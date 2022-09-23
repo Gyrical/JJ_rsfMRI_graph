@@ -15,75 +15,40 @@ import pandas as pd
 import scipy.interpolate
 from scipy.stats import pearsonr
 import scipy.io
-import os
 
+# Load data
+# D = scipy.io.loadmat('fc_graph_data.mat')
+D = scipy.io.loadmat('/home/tianlu/OneDrive/Projects/202112_Jesser_thesis/Code_Data_Sharing/analysis/matlab.mat')
+lesionsize = []#scipy.io.loadmat('lesionsize.mat')
 
-# Load data and prepare settings
-Dj = scipy.io.loadmat('fc_graph_data.mat')
-input()
-# --- 220629 Jessica ---
-D = {'CCall_sp' : Dj['pat_all_cc'],
-     'CCall_ll' : Dj['pat_dom_cc'],
-     'CCall_rl' : Dj['pat_nondom_cc'],
-     'CCall_hc' : Dj['con_cc'],
-     'pl_sp'    : Dj['pat_all_cp'],
-     'pl_ll'    : Dj['pat_dom_cp'],
-     'pl_rl'    : Dj['pat_nondom_cp'],
-     'pl_hc'    : Dj['con_cp'],
-     'CCm1_sp'  : Dj['pat_all_preCGcc'],
-     'CCm1_ll'  : Dj['pat_dom_preCGcc'],
-     'CCm1_rl'  : Dj['pat_nondom_preCGcc'],
-     'CCm1_hc'  : Dj['con_preCGcc'],
-     'bc_sp'    : Dj['pat_all_preCGcb'],
-     'bc_ll'    : Dj['pat_dom_preCGcb'],
-     'bc_rl'    : Dj['pat_nondom_preCGcb'],
-     'bc_hc'    : Dj['con_preCGcb'],
-     'wb_sp'    : Dj['m0_all'],
-     'wb_hc'    : Dj['m0_con'],
-     'wb_ll'    : Dj['m0_dom'],
-     'wb_rl'    : Dj['m0_nondom'],
-     'ho_sp'    : Dj['m4_all'],
-     'ho_hc'    : Dj['m4_con'],
-     'ho_ll'    : Dj['m4_dom'],
-     'ho_rl'    : Dj['m4_nondom']
-    }
-
-measl  = 'CCall pl CCm1 bc wb ho'.split() # list(set([x.split('_')[0] for x in keyl]))
-groupl = 'sp hc ll rl'.split() #list(set([x.split('_')[1] for x in keyl]))
-# ---
-
-# Dl = scipy.io.loadmat(dir_main+'lesionsize.mat')
-# lesionsize = Dl['lesionsize']/1000
-# lesionsize = lesionsize.astype(np.float64).flatten()
-lesionsize = Dj['lesion'].flatten()/1000
-
+# Study settings
 sparsl = np.arange(0.1,0.95,0.05) 
-keyl   = [x for x in D.keys() if '__' not in x]
+measl  = 'cc cp preCGcc preCGcb fcwb fch'.split()
+groupl = 'pat con ll rl'.split() 
 labsgm = 'CC$_{avg}$ PL CC$_{preCG}$ BC$_{preCG}$ FC$_{wb}$ FC$_{h}$'.split()
 labsgr = ['Stroke patients','Healthy controls','LL','RL']
 
-# https://matplotlib.org/stable/gallery/color/color_cycle_default.html
+# Figure settings # https://matplotlib.org/stable/gallery/color/color_cycle_default.html
 pltcolors = [plt.rcParams['axes.prop_cycle'].by_key()['color'][x] for x in [4,7,0,1]]#[:4]
 pltmarkers = ['^','o','<','>'] # SP HC LL RL
-
-# sublabs  = 'A B C D E F'.split()
-sublabs  = ['A','','B','','C','']
+sublabs  = ['A','','B','','C',''] # sublabs  = 'A B C D E F'.split()
 sublfont = {'fontsize':14,'fontweight':'bold','fontname':'Arial'}
 legendst = {'bbox_to_anchor':(1.01, 1),'frameon':False}
 legendsts = {'bbox_to_anchor':(1.01, 0.95),'frameon':False}
 scatterst = {'s':30,'zorder':3,'label':'_nolegend_'}
 signst1 = {'ha':'center','va':'bottom','fontsize':14}
 signst2 = {'ha':'center','va':'baseline','fontsize':14}
-
 plt.rcParams['font.sans-serif'] = 'Arial'
 plt.rcParams['font.family'] = 'sans-serif'
 
-sstats = True
+# Stats settings
+sstats = 0#True
 pchoic = 1 # 1: uncorrected, 3: bonferroni, 5: fdr
+
 
 #%% Fig 2 (2-3) Combined SP vs. HC
     
-statsm = [['*' if x<.05 else '' for x in Dj['stats_all_'+xx][5,:]] for xx in 'cc cp pcc pcb'.split()] # else '^' if x<.1
+statsm = [['*' if x<.05 else '' for x in D['stats_all_'+xx][5,:]] for xx in 'cc cp pcc pcb'.split()] # else '^' if x<.1
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
 for idxm,labm in enumerate(measl):
@@ -94,7 +59,7 @@ for idxm,labm in enumerate(measl):
         for idxg,labg in enumerate(groupl[:2]):
             
             # Prepare data
-            data = D[labm+'_'+labg]
+            data = D[labg+'_'+labm]
             data[data==np.inf] = np.nan
             x = sparsl
             y = np.nanmean(data,0)
@@ -134,8 +99,8 @@ for idxm,labm in enumerate(measl):
     else:
         x = np.arange(1,3)  
         # Prepare data
-        data = [[x for x in np.squeeze(D[labm+'_'+groupl[0]]) if x not in [np.nan,np.inf]],
-                [x for x in np.squeeze(D[labm+'_'+groupl[1]]) if x not in [np.nan,np.inf]]]
+        data = [[x for x in np.squeeze(D[groupl[0]+'_'+labm]) if x not in [np.nan,np.inf]],
+                [x for x in np.squeeze(D[groupl[1]+'_'+labm]) if x not in [np.nan,np.inf]]]
         
         # Plot data    
         violins = ax.violinplot(data,showmeans=False,showmedians=False,showextrema=False)
@@ -172,7 +137,7 @@ for idxm,labm in enumerate(measl):
     ax.spines['top'].set_visible(False)
     
 fig.tight_layout()
-fn_out = os.path.dirname(fn)+ '/fig2_largegroups.png' 
+fn_out = 'fig2_largegroups.png' 
 plt.savefig(fn_out, dpi=300)
 print(fn_out+' saved!')
 plt.show()
@@ -181,8 +146,8 @@ plt.show()
 #%% Figure 3 (4-5) combined LL vs. RL vs. HC
 
 slabs = ['$LL ≠ RL$','$LL ≠ HC$','$RL ≠ HC$']
-statsma = [[['*' if x<.05 else '' for x in Dj['stats_{}_{}'.format(xx,yy)][1,:]] 
-              for xx in 'dom_nondom dom nondom'.split()] for yy in 'cc cp pcc pcb'.split()] # else '^' if x<.1 
+statsma = []#[[['*' if x<.05 else '' for x in D['stats_{}_{}'.format(xx,yy)][1,:]] 
+              # for xx in 'dom_nondom dom nondom'.split()] for yy in 'cc cp pcc pcb'.split()] # else '^' if x<.1 
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
 for idxm,labm in enumerate(measl):
@@ -192,8 +157,8 @@ for idxm,labm in enumerate(measl):
         for idxg,labg in enumerate(groupl[1:]):
             
             # Prepare data
-            if labm+'_'+labg not in D.keys(): continue
-            data = D[labm+'_'+labg]
+            if labg+'_'+labm not in D.keys(): continue
+            data = D[labg+'_'+labm]
             data[data==np.inf] = np.nan
             x = sparsl
             y = np.nanmean(data,0)
@@ -234,7 +199,7 @@ for idxm,labm in enumerate(measl):
     else:
         # Prepare data
         x = np.arange(1,4)
-        data = [[x for x in np.squeeze(D[labm+'_'+x]) if x not in [np.nan,np.inf]] for x in groupl[1:]]
+        data = [[x for x in np.squeeze(D[x+'_'+labm]) if x not in [np.nan,np.inf]] for x in groupl[1:]]
         
         # Plot data    
         violins = ax.violinplot(data,showmeans=False,showmedians=False,showextrema=False)
@@ -279,7 +244,7 @@ for idxm,labm in enumerate(measl):
     # ax.legend(labsgr[1:],**legendst)
     
 fig.tight_layout() 
-plt.savefig(os.path.dirname(fn)+ '/fig3_subgroups.png', dpi=300)
+plt.savefig('fig3_subgroups.png', dpi=300)
 print('fig3_subgroups.png saved!')
 plt.show()
 
@@ -294,8 +259,8 @@ if 1:
         ax = axes.flatten()[idxm]
         
         # Prepare data
-        if idxm>3: data = D[labm+'_sp'].flatten()
-        else: data = D[labm+'_sp'][:,np.where(np.isclose(sparsl,0.75))[0][0]].flatten() # 4: 0.75
+        if idxm>3: data = D['pat_'+labm].flatten()
+        else: data = D['pat_'+labm][:,np.where(np.isclose(sparsl,0.75))[0][0]].flatten() # 4: 0.75
         
         # Plot
         if 1:    
@@ -333,7 +298,7 @@ else:
     # Prepare data
     dfs=[]    
     for idxm,labm in enumerate(measl):
-        data  = D[labm+'_sp']
+        data  = D['pat_'+labm]
         if idxm < 4:
             group = numpy.matlib.repmat(sparsl,data.shape[0],1).T.flatten()
             x     = numpy.matlib.repmat(lesionsize,1,data.shape[1])
@@ -362,7 +327,7 @@ else:
     
 
 plt.tight_layout()
-plt.savefig(os.path.dirname(fn)+ '/fig4_correlations.png', dpi=300,bbox_inches='tight')
+plt.savefig('fig4_correlations.png', dpi=300,bbox_inches='tight')
 print('fig4_correlations.png saved!')
 plt.show()
 
@@ -387,188 +352,7 @@ plt.show()
     
     
     
-#%% Old versions
-# Figure 2
-# SP vs. HC; CC, path length, CCm1, BC over 8 sparsity levels
-if 0:    
-    fig,axes = plt.subplots(2,2,figsize=(11,8))
-    
-    for idxm,labm in enumerate(measl[:4]):
-        ax = axes.flatten()[idxm]
-        
-        for idxg,labg in enumerate(groupl[:2]):
-            
-            # Prepare data
-            data = D[labm+'_'+labg]
-            data[data==np.inf] = np.nan
-            x = sparsl
-            y = np.nanmean(data,0)
-            yerr = np.nanstd(data,0)/np.sqrt(np.sum(~np.isnan(data),0))
-            
-            # Plot data
-            if 0:
-                x+=idxg*0.01
-                ax.errorbar(x,y,yerr,color=pltcolors[idxg],marker=pltmarkers[idxg],capsize=5)
-            if 1:
-                ysl = scipy.interpolate.interp1d(x,y-yerr)
-                ysh = scipy.interpolate.interp1d(x,y+yerr)
-                xs = np.linspace(x[0],x[-1],len(sparsl)*5)
-                
-                ax.plot(x,y,color=pltcolors[idxg],marker=pltmarkers[idxg])
-                ax.fill_between(xs,ysl(xs),ysh(xs),alpha=0.25,color=pltcolors[idxg])
-            
-        # Display settings
-        ax.set_xticks(sparsl)
-        ax.set_xticklabels(['{:.2f}'.format(x) for x in sparsl])
-        ax.set_xlabel('sparsity')
-        ax.set_ylabel(labsgm[idxm])
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        xls,yls = ax.get_xlim(), ax.get_ylim()
-        ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
-        if idxm==1: ax.legend(labsgr[:2],**legendst)
-    
-    fig.tight_layout() 
-    plt.show()
-    
-    
-    #%% Figure 3
-    # SP vs. HC; FC whole brain and homotopic
-    
-    fig,axes = plt.subplots(1,2,figsize=(10,4))
-    
-    for idxm,labm in enumerate(measl[4:]):
-        ax = axes.flatten()[idxm]
-        x = np.arange(1,3)  
-        # Prepare data
-        data = [[x for x in np.squeeze(D[labm+'_'+groupl[0]]) if x not in [np.nan,np.inf]],
-                [x for x in np.squeeze(D[labm+'_'+groupl[1]]) if x not in [np.nan,np.inf]]]
-        
-        # Plot data    
-        violins = ax.violinplot(data,showmeans=False,showmedians=False,showextrema=False)
-        for idxv,v in enumerate(violins['bodies']): v.set_facecolor(pltcolors[idxv])
-        
-        qmq=np.asarray([np.percentile(x,[50,25,75]) for x in data])
-        ax.scatter(x,qmq[:,0],marker='o',color='white',s=30,zorder=3,label='_nolegend_')
-        for idx in x: ax.plot([idx,idx],qmq[idx-1,(1,2)].flatten(),color='k',label='_nolegend_')
-    
-        xls,yls = ax.get_xlim(), ax.get_ylim()
-        if idxm==1:
-            yls = [yls[0],yls[1]*1.022]
-            ax.set_ylim(top = yls[1])
-            esc = np.diff(yls)*0.07
-            el = (np.ones((2,))*np.diff(yls)*0.02,np.zeros((2,)))
-            ax.errorbar([1,2],np.ones((2,))*yls[1],el,color='k')
-            ax.text(1.5,yls[1],'*',ha='center',va='baseline',fontsize=14)
-            
-        # Display settings
-        ax.set_xticks([1,2])
-        ax.set_xticklabels(labsgr[:2])
-        
-        ax.set_ylabel(labsgm[idxm+4])
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
-        if idxm==1: ax.legend(labsgr[:2],bbox_to_anchor=(1.02, 1),frameon=False)
-        
-    fig.tight_layout() 
-    plt.show()
-    
-    #%% Figure 4
-    # LL vs. RL vs. HC; CC, path length, CCm1, BC over 8 sparsity levels
-    
-    fig,axes = plt.subplots(2,2,figsize=(11,8))
-    
-    for idxm,labm in enumerate(measl[:4]):
-        ax = axes.flatten()[idxm]
-        
-        for idxg,labg in enumerate(groupl[1:]):
-            
-            # Prepare data
-            data = D[labm+'_'+labg]
-            data[data==np.inf] = np.nan
-            x = sparsl
-            y = np.nanmean(data,0)
-            yerr = np.nanstd(data,0)/np.sqrt(np.sum(~np.isnan(data),0))
-            
-            # Plot data
-            if 0:
-                x+=idxg*0.01
-                ax.errorbar(x,y,yerr,color=pltcolors[idxg+1],marker=pltmarkers[idxg+1],capsize=5)
-            if 1:
-                ysl = scipy.interpolate.interp1d(x,y-yerr)
-                ysh = scipy.interpolate.interp1d(x,y+yerr)
-                xs = np.linspace(x[0],x[-1],len(sparsl)*5)
-                
-                ax.plot(x,y,color=pltcolors[idxg+1],marker=pltmarkers[idxg+1])
-                ax.fill_between(xs,ysl(xs),ysh(xs),alpha=0.25,color=pltcolors[idxg+1],label='_nolegend_')
-            
-        # Display settings
-        ax.set_xticks(sparsl)
-        ax.set_xticklabels(['{:.2f}'.format(x) for x in sparsl])
-        ax.set_xlabel('sparsity')
-        ax.set_ylabel(labsgm[idxm])
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        xls,yls = ax.get_xlim(), ax.get_ylim()
-        ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
-        
-        if idxm==1: 
-            ax.legend(labsgr[1:],**legendst)
-            # handles, labels = ax.get_legend_handles_labels()
-            # order = [1,2,0]
-            # ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order])
-            
-    fig.tight_layout() 
-    plt.show()
-    
-    
-    #%% Figure 5
-    # LL vs. RL vs. HC; FC whole brain and homotopic
-    
-    fig,axes = plt.subplots(1,2,figsize=(10,4))
-    
-    for idxm,labm in enumerate(measl[4:]):
-        ax = axes.flatten()[idxm]
-        x = np.arange(1,4)
-            
-        # Prepare data
-        data = [[x for x in np.squeeze(D[labm+'_'+x]) if x not in [np.nan,np.inf]] for x in groupl[1:]]
-        
-        # Plot data    
-        violins = ax.violinplot(data,showmeans=False,showmedians=False,showextrema=False)
-        for idxv,v in enumerate(violins['bodies']): v.set_facecolor(pltcolors[idxv+1])
-        
-        qmq=np.asarray([np.percentile(x,[50,25,75]) for x in data])
-        ax.scatter(x,qmq[:,0],marker='o',color='white',s=30,zorder=3,label='_nolegend_')
-        for idx in x: ax.plot([idx,idx],qmq[idx-1,(1,2)].flatten(),color='k',label='_nolegend_')
-            
-        xls,yls = ax.get_xlim(), ax.get_ylim()
-        if idxm==1:
-            yls = [yls[0],yls[1]*1.022]
-            ax.set_ylim(top = yls[1])
-            esc = np.diff(yls)*0.07
-            el = (np.ones((2,))*np.diff(yls)*0.02,np.zeros((2,)))
-            ax.errorbar([1,3],np.ones((2,))*yls[1],el,color='k')
-            ax.text(2,yls[1],'*',ha='center',va='baseline',fontsize=14)
-            
-            ax.errorbar([1,1.9],np.ones((2,))*yls[1]-esc,el,color='k')
-            ax.text(1.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
-            ax.errorbar([2.1,3],np.ones((2,))*yls[1]-esc,el,color='k')
-            ax.text(2.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
-            
-        # Display settings
-        ax.set_xticks([1,2,3])
-        ax.set_xticklabels(labsgr[1:])
-        
-        ax.set_ylabel(labsgm[idxm+4])
-        ax.spines['right'].set_visible(False)
-        ax.spines['top'].set_visible(False)
-        ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
-        if idxm==1: ax.legend(labsgr[1:],bbox_to_anchor=(1.02, 1),frameon=False)
-        
-    fig.tight_layout() 
-    plt.show()
+
 
 
 
