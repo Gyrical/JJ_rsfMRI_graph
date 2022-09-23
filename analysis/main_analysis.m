@@ -2,7 +2,7 @@
 %  
 %% main analysis script
 % Calculates the connectivity and graph measures, performs statistical
-% analyses and and saves measures to *.mat 
+% analyses and saves measures to *.mat 
 % 
 % Ran with BrainConnectivityToolbox version 2019_03_03_BCT in MATLAB R2016b
 %
@@ -58,38 +58,36 @@ end
 % >>> Jessica: since it's confusing to use the 'normalize_matrix' function
 % when no normalization takes place, I just did the preprocessing here in
 % the main script
-% Not sure what the initial motivation was, it seems that many studies just
-% use the Pearson's correlation matrix directly in the graph calculations
-% (e.g. Wang et al., 2010). 
 
 % Set diagonal to 0
 corr_pat(repmat(eye(size(corr_pat,1)),1,1,size(corr_pat,3))==1) = 0;
 corr_con(repmat(eye(size(corr_con,1)),1,1,size(corr_con,3))==1) = 0;
 
-use_fisher = false;%true;
+% use_fisher = false;
+use_fisher = true;
 
 if use_fisher
     % Fisher z-transform
     corr_pat_fi = log((1+corr_pat)./(1-corr_pat))./2;
     corr_con_fi = log((1+corr_con)./(1-corr_con))./2;
+    
+    % Set negative values to 0
+    norm_pat = corr_pat_fi; norm_pat(norm_pat<0)=0;
+    norm_con = corr_con_fi; norm_con(norm_con<0)=0;
 
-    % % Normalize connectivity matrices -> Remove this step, replaced by min-max
-    % scaling below
-    % norm_pat = normalize_matrix(corr_pat_fi);
-    % norm_con = normalize_matrix(corr_con_fi);
-
-    % Rescale Z-transformed values to the interval [0,1] (only if Z-transformed)
-    norm_pat = zeros(size(corr_pat));
-    for subj = 1:size(corr_pat,3)
-        mat = corr_pat_fi(:,:,subj);
-        norm_pat(:,:,subj) = (mat-min(mat(:))) ./ (max(mat(:))-min(mat(:)));
-    end
-    norm_con = zeros(size(corr_con));
-    for subj = 1:size(corr_con,3)
-        mat = corr_con_fi(:,:,subj);
-        norm_con(:,:,subj) = (mat-min(mat(:))) ./ (max(mat(:))-min(mat(:)));
-    end
+%     % Other option: rescale Z-transformed values to the interval [0,1] (only if Z-transformed)
+%     norm_pat = zeros(size(corr_pat));
+%     for subj = 1:size(corr_pat,3)
+%         mat = corr_pat_fi(:,:,subj);
+%         norm_pat(:,:,subj) = (mat-min(mat(:))) ./ (max(mat(:))-min(mat(:)));
+%     end
+%     norm_con = zeros(size(corr_con));
+%     for subj = 1:size(corr_con,3)
+%         mat = corr_con_fi(:,:,subj);
+%         norm_con(:,:,subj) = (mat-min(mat(:))) ./ (max(mat(:))-min(mat(:)));
+%     end
 else
+    % Take absolute correlation between time courses without z-scoring
     norm_pat = abs(corr_pat);
     norm_con = abs(corr_con);
 end
@@ -125,15 +123,15 @@ else
         data.(strcat('rl_',meas)) = data.(strcat('pat_',meas))(rl_idx,:);
     end
 
-
-    % Save data for visualizations in Python
+    
+    % Save network measures
     fprintf('Saving data to: %s...\n',fn_data)
     save(fn_data,'-struct','data')
 
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Statistical analyses
+%%                      Statistical analyses
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Initialization
@@ -193,7 +191,7 @@ disp('One-way ANOVA test results patients LL vs. RL vs. controls:')
 disp(cell2table(result_fc_anova(:,1:3),'VariableNames',{'measure','Pval','F'}))
 for idxm = 1:2
     if not(isempty(result_fc_anova{idxm,4}))
-        disp(['Pairwise compairsons for: ',result_fc_anova{idxm,1}]);
+        disp(['Pairwise comparisons for: ',result_fc_anova{idxm,1}]);
         disp(array2table(result_fc_anova{idxm,4},'VariableNames',{'G1','G2','Lowerlimit','Difference','Upperlimit','Pvalue'})); 
     end
 end
@@ -260,9 +258,9 @@ for idxm = 1:length(measures)
     end
 end
 disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))},measures(1:2))'),'RowNames',measures(1:2),'VariableNames',{'R','P'}))
-disp('R:')
+disp('R per sparsity level:')
 disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,1)}, measures(3:end))),'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
-disp('p:')
+disp('p per sparsity level:')
 disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,2)}, measures(3:end))),'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
 
 %% Save results
