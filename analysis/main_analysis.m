@@ -92,6 +92,7 @@ else
     norm_con = abs(corr_con);
 end
 
+
 %% Calculate network measures
 disp('Calculating network measures...')
 

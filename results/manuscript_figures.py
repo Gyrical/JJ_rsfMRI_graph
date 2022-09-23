@@ -28,6 +28,7 @@ measl  = 'cc cp preCGcc preCGcb fcwb fch'.split()
 groupl = 'pat con ll rl'.split() 
 labsgm = 'CC$_{avg}$ PL CC$_{preCG}$ BC$_{preCG}$ FC$_{wb}$ FC$_{h}$'.split()
 labsgr = ['Stroke patients','Healthy controls','LL','RL']
+alpha  = 0.05
 
 # Figure settings # https://matplotlib.org/stable/gallery/color/color_cycle_default.html
 pltcolors = [plt.rcParams['axes.prop_cycle'].by_key()['color'][x] for x in [4,7,0,1]]#[:4]
@@ -49,7 +50,7 @@ sstats = True
 
 #%% Fig 2 (2-3) Combined SP vs. HC
     
-statsm = [['*' if p<.05 else '' for p in Dstats['stats_all_'+x].flatten()] for x in measl[:4]]
+statsm = [['*' if p < alpha else '' for p in Dstats['stats_all_'+x].flatten()] for x in measl[:4]]
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
 for idxm,labm in enumerate(measl):
@@ -117,7 +118,7 @@ for idxm,labm in enumerate(measl):
             ax.plot([idx+1,idx+1],qmq[idx,(1,2)],color='k',label='_nolegend_') #pltcolors[idx]
         
         # Show stats markers
-        if sstats and idxm==5:
+        if sstats and Dstats['stats_all_'+labm] < alpha:
             xls,yls = ax.get_xlim(), ax.get_ylim()
             yls = [yls[0],yls[1]*1.022]
             ax.set_ylim(top = yls[1])
@@ -152,7 +153,7 @@ plt.show()
 #%% Figure 3 (4-5) combined LL vs. RL vs. HC
 
 slabs = ['$LL ≠ RL$','$LL ≠ HC$','$RL ≠ HC$']
-statsma = [[['*' if x<.05 else '' for x in Dstats['stats_{}_{}'.format(xx,yy)]] 
+statsma = [[['*' if x < alpha else '' for x in Dstats['stats_{}_{}'.format(xx,yy)]] 
                for xx in 'll_rl con_ll con_rl'.split()] for yy in measl[:4]] # else '^' if x<.1 
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
@@ -171,16 +172,12 @@ for idxm,labm in enumerate(measl):
             yerr = np.nanstd(data,0)/np.sqrt(np.sum(~np.isnan(data),0))
             
             # Plot data
-            if 0:
-                x+=idxg*0.01
-                ax.errorbar(x,y,yerr,color=pltcolors[idxg+1],marker=pltmarkers[idxg+1],capsize=5)
-            if 1:
-                ysl = scipy.interpolate.interp1d(x,y-yerr)
-                ysh = scipy.interpolate.interp1d(x,y+yerr)
-                xs = np.linspace(x[0],x[-1],len(sparsl)*5)
-                
-                ax.plot(x,y,color=pltcolors[idxg+1],marker=pltmarkers[idxg+1],label=labsgr[idxg+1])
-                ax.fill_between(xs,ysl(xs),ysh(xs),alpha=0.25,color=pltcolors[idxg+1],label='_nolegend_')
+            ysl = scipy.interpolate.interp1d(x,y-yerr)
+            ysh = scipy.interpolate.interp1d(x,y+yerr)
+            xs = np.linspace(x[0],x[-1],len(sparsl)*5)
+            
+            ax.plot(x,y,color=pltcolors[idxg+1],marker=pltmarkers[idxg+1],label=labsgr[idxg+1])
+            ax.fill_between(xs,ysl(xs),ysh(xs),alpha=0.25,color=pltcolors[idxg+1],label='_nolegend_')
         
         # show stats
         if sstats:
@@ -220,18 +217,22 @@ for idxm,labm in enumerate(measl):
         for idx in x: ax.plot([idx,idx],qmq[idx-1,(1,2)].flatten(),color='k',label='_nolegend_')
             
         xls,yls = ax.get_xlim(), ax.get_ylim()
-        if idxm==5:
+        if Dstats['stats_con_ll_rl_'+labm]<alpha:
             yls = [yls[0],yls[1]*1.022]
             ax.set_ylim(top = yls[1])
             esc = np.diff(yls)*0.07
             el = (np.ones((2,))*np.diff(yls)*0.02,np.zeros((2,)))
-            ax.errorbar([1,3],np.ones((2,))*yls[1],el,color='k')
-            ax.text(2,yls[1],'*',ha='center',va='baseline',fontsize=14)
             
-            ax.errorbar([1,1.9],np.ones((2,))*yls[1]-esc,el,color='k')
-            ax.text(1.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
-            ax.errorbar([2.1,3],np.ones((2,))*yls[1]-esc,el,color='k')
-            ax.text(2.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
+            if Dstats['stats_con_rl_'+labm] < alpha:
+                ax.errorbar([1,3],np.ones((2,))*yls[1],el,color='k')
+                ax.text(2,yls[1],'*',ha='center',va='baseline',fontsize=14)
+
+            if Dstats['stats_con_ll_'+labm] < alpha:          
+                ax.errorbar([1,1.9],np.ones((2,))*yls[1]-esc,el,color='k')
+                ax.text(1.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
+            if Dstats['stats_ll_rl_'+labm] < alpha:
+                ax.errorbar([2.1,3],np.ones((2,))*yls[1]-esc,el,color='k')
+                ax.text(2.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
             
         # Display settings FC
         ax.set_xticks([1,2,3])
@@ -241,13 +242,14 @@ for idxm,labm in enumerate(measl):
     ax.set_ylabel(labsgm[idxm])
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
+    # Show sublabels
     xls,yls = ax.get_xlim(), ax.get_ylim()
     ax.text(xls[0]-np.diff(xls)*0.25,yls[1],sublabs[idxm],**sublfont)
+    # Show legend
     if idxm==1 or idxm==5: 
         handles, labels = ax.get_legend_handles_labels()
         order = [1,2,0]
-        ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],**legendsts)
-    # ax.legend(labsgr[1:],**legendst)
+        ax.legend([handles[idx] for idx in order],[labels[idx] for idx in order],loc='upper left',**legendsts)
     
 fig.tight_layout() 
 plt.savefig('fig3_subgroups.png', dpi=300)
