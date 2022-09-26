@@ -10,16 +10,18 @@
 
 clearvars; close all; clc
 
+% Data
 dir_main = fileparts(pwd);
+load([dir_main, '/data/patients/lesionsize.mat'],'lesionsize');
 fn_data = [dir_main, '/results/fc_graph_data.mat'];
 fn_stats = [dir_main, '/results/fc_graph_stats.mat'];
 
+% Settings
 measures = {'fcwb','fch','cc','cp','preCGcc','preCGcb'};
 groups = {'pat','con','ll','rl'};
 n_roi = 116;
 sparsities = 0.1:0.05:0.9;
 
-load([dir_main, '/data/patients/lesionsize.mat'],'lesionsize');
       
 %% Load timecourse data
 disp('Loading data...')
@@ -28,6 +30,7 @@ fn_patients = dir([dir_main, '/data/patients/XR_sub_*.mat']);
 fn_patients = table2struct(sortrows(struct2table(fn_patients))); % make sure filenames are sorted
 tc_pat = cell(length(fn_patients),1);
 for subj = 1:length(fn_patients)
+%     fprintf('%d\t%s\n',subj,fn_patients(subj).name) % Uncomment to check order of files 
     tc_pat(subj) = struct2cell(load([fn_patients(subj).folder,'/',fn_patients(subj).name]));
 end
 
@@ -35,6 +38,7 @@ fn_controls = dir([dir_main, '/data/controls/*.mat']);
 fn_controls = table2struct(sortrows(struct2table(fn_controls)));
 tc_con = cell(length(fn_controls),1);
 for subj = 1:length(fn_controls)
+%     fprintf('%d\t%s\n',subj,fn_controls(subj).name) % Uncomment to check order of files 
     tc_con(subj) = struct2cell(load([fn_controls(subj).folder,'/',fn_controls(subj).name]));
 end
 
@@ -61,44 +65,24 @@ end
 % when no normalization takes place, I just did the preprocessing here in
 % the main script
 
-% Set diagonal to 0
-corr_pat(repmat(eye(n_roi),1,1,size(corr_pat,3))==1) = 0;
-corr_con(repmat(eye(n_roi),1,1,size(corr_con,3))==1) = 0;
+% Fisher z-transform
+corr_pat_fi = log((1+corr_pat)./(1-corr_pat))./2;
+corr_con_fi = log((1+corr_con)./(1-corr_con))./2;
 
-% use_fisher = false;
-use_fisher = true;
+% Set negative values to 0
+norm_pat = corr_pat_fi; norm_pat(norm_pat<0)=0;
+norm_con = corr_con_fi; norm_con(norm_con<0)=0;
 
-if use_fisher
-    % Fisher z-transform
-    corr_pat_fi = log((1+corr_pat)./(1-corr_pat))./2;
-    corr_con_fi = log((1+corr_con)./(1-corr_con))./2;
-    
-    % Set negative values to 0
-    norm_pat = corr_pat_fi; norm_pat(norm_pat<0)=0;
-    norm_con = corr_con_fi; norm_con(norm_con<0)=0;
+% Set diagonal values to 0
+norm_pat(repmat(eye(n_roi),1,1,size(norm_pat,3))==1) = 0;
+norm_con(repmat(eye(n_roi),1,1,size(norm_con,3))==1) = 0;
 
-%     % Other option: rescale Z-transformed values to the interval [0,1] (only if Z-transformed)
-%     norm_pat = zeros(size(corr_pat));
-%     for subj = 1:size(corr_pat,3)
-%         mat = corr_pat_fi(:,:,subj);
-%         norm_pat(:,:,subj) = (mat-min(mat(:))) ./ (max(mat(:))-min(mat(:)));
-%     end
-%     norm_con = zeros(size(corr_con));
-%     for subj = 1:size(corr_con,3)
-%         mat = corr_con_fi(:,:,subj);
-%         norm_con(:,:,subj) = (mat-min(mat(:))) ./ (max(mat(:))-min(mat(:)));
-%     end
-else
-    % Take absolute correlation between time courses without z-scoring
-    norm_pat = abs(corr_pat);
-    norm_con = abs(corr_con);
-end
 
 
 %% Calculate network measures
 disp('Calculating network measures...')
 
-if exist(fn_data,'file')==2 
+if exist(fn_data,'file') == 2 
     data = load(fn_data);
 else
     data = struct();
@@ -149,6 +133,7 @@ results = struct();
 %% Functional connectivity
 
 % Test functional connectivity measures for normality
+
 result_fc_normality = cell(length(keys_fc),4);
 for idxm = 1:length(keys_fc)
     [H,P,KSSTAT] = kstest(data.(keys_fc{idxm}));
@@ -157,20 +142,28 @@ end
 disp('Kolmogorov-Smirnov goodness-of-fit hypothesis test results:')
 disp(cell2table(result_fc_normality,'VariableNames',{'measure','H','Pval','KSSTAT'}))
 
+
 % Compare all stroke patients to healthy controls
+
 result_fc_patcon = cell(2,2);
 for idxm = 1:2
     meas = measures{idxm};
     pat = data.(strcat(groups{1},'_',meas));
     con = data.(strcat(groups{2},'_',meas));
+    
     [P] = ranksum(pat, con);
+%     % Uncomment to use measure of effect size (under construction)
+%     stats = mes(pat,con,'cles','nBoot',1000); % <<< Jessica: can you please check these settings?
+    
     result_fc_patcon(idxm,:) = {meas,P};
     results.(strcat('stats_all_',meas)) = P;
 end
 disp('Wilcoxon rank sum test results patients vs. controls:')
 disp(cell2table(result_fc_patcon,'VariableNames',{'measure','Pval'}))
 
+
 % Compare stroke subgroups and healthy controls
+
 GROUP = cellfun(@(x) repmat({x},1,length(data.(strcat(x,'_fch')))),groups(2:end),'UniformOutput',false);
 GROUP = [GROUP{:}];
 result_fc_anova = cell(2,4);
@@ -182,6 +175,9 @@ for idxm = 1:2
     result_fc_anova(idxm,1:3) = {meas,P,TAB{2,5}};
     MC = multcompare(STATS);
         
+%     % Uncomment to use measure of effect size (under construction)
+%     [stats,varargout] = mes1way(X,'group',GROUP,'nBoot',1000);
+    
     % Save results
     results.(strcat('stats_con_ll_rl_',meas)) = P;
     for comp = 1:size(MC,1)
@@ -205,6 +201,7 @@ end
 
 
 % Compare graph metrics between patients and controls
+
 result_gm_patcon = zeros(4,length(sparsities));
 for idxm = 3:length(measures)
     meas = measures{idxm};
@@ -220,7 +217,9 @@ end
 disp('Wilcoxon rank sum test results patients vs. controls (per sparsity level):')
 disp(array2table(result_gm_patcon','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
 
+
 % Compare stroke subgroups and healthy controls
+
 GROUP = cellfun(@(x) repmat({x},1,length(data.(strcat(x,'_fch')))),groups(2:end),'UniformOutput',false);
 GROUP = [GROUP{:}];
 result_gm_anova = zeros(4,length(sparsities));
@@ -249,6 +248,7 @@ end
 disp('One-way ANOVA test results patients LL vs. RL vs. controls (per sparsity level):')
 disp(array2table(result_gm_anova','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
 
+
 %% Correlations with lesion size
 
 disp('Correlation between lesion size and network measures:')
@@ -265,6 +265,7 @@ disp('R per sparsity level:')
 disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,1)}, measures(3:end))),'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
 disp('p per sparsity level:')
 disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,2)}, measures(3:end))),'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
+
 
 %% Save results
 
