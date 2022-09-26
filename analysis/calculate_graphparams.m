@@ -21,11 +21,10 @@
 % distance_wei.m, clustering_coef_wu.m, charpath.m, betweenness_wei.m
 %%
 
-function [cc, cp, preCGcc, preCGcb] = calculate_graphparams(matrix)
+function [cc, cp, preCGcc, preCGcb] = calculate_graphparams(matrix,sparsity)
 
 % Settings
 idxPreCG = 1;
-sparsity = 0.1:0.05:0.9;
 n_subj = size(matrix,3);
 
 % Prepare output matrices

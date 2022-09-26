@@ -16,6 +16,8 @@ fn_stats = [dir_main, '/results/fc_graph_stats.mat'];
 
 measures = {'fcwb','fch','cc','cp','preCGcc','preCGcb'};
 groups = {'pat','con','ll','rl'};
+n_roi = 116;
+sparsities = 0.1:0.05:0.9;
 
 load([dir_main, '/data/patients/lesionsize.mat'],'lesionsize');
       
@@ -41,13 +43,13 @@ end
 disp('Calculating connectivity...')
 
 % Patients
-corr_pat = zeros(size(tc_pat{1},2),size(tc_pat{1},2),length(tc_pat));
+corr_pat = zeros(n_roi,n_roi,length(tc_pat));
 for subj = 1:length(tc_pat)
     corr_pat(:,:,subj) = corrcoef(tc_pat{subj});
 end
 
 % Controls
-corr_con = zeros(size(tc_con{1},2),size(tc_con{1},2),length(tc_con));
+corr_con = zeros(n_roi,n_roi,length(tc_con));
 for subj = 1:length(tc_con)
     corr_con(:,:,subj) = corrcoef(tc_con{subj});
 end
@@ -60,8 +62,8 @@ end
 % the main script
 
 % Set diagonal to 0
-corr_pat(repmat(eye(size(corr_pat,1)),1,1,size(corr_pat,3))==1) = 0;
-corr_con(repmat(eye(size(corr_con,1)),1,1,size(corr_con,3))==1) = 0;
+corr_pat(repmat(eye(n_roi),1,1,size(corr_pat,3))==1) = 0;
+corr_con(repmat(eye(n_roi),1,1,size(corr_con,3))==1) = 0;
 
 % use_fisher = false;
 use_fisher = true;
@@ -106,9 +108,10 @@ else
     [data.con_fcwb,data.con_fch] = calculate_fc(norm_con);
 
     % Calculate graph parameters
-    [data.pat_cc, data.pat_cp, data.pat_preCGcc, data.pat_preCGcb] = calculate_graphparams(norm_pat);
-    [data.con_cc, data.con_cp, data.con_preCGcc, data.con_preCGcb] = calculate_graphparams(norm_con);
+    [data.pat_cc, data.pat_cp, data.pat_preCGcc, data.pat_preCGcb] = calculate_graphparams(norm_pat,sparsities);
+    [data.con_cc, data.con_cp, data.con_preCGcc, data.con_preCGcb] = calculate_graphparams(norm_con,sparsities);
 
+    
     % Get subgroup data
     pat_all = cellfun(@(x) {x(1:end-4)},{fn_patients.name}); 
     pat_ll = {'XR_sub_574_fl', 'XR_sub_089_fl','XR_sub_516_fl','XR_sub_533_fl','XR_sub_554_fl',...
@@ -200,7 +203,6 @@ end
 
 %% Graph measures
 
-sparsities = 0.1:0.05:0.9;
 
 % Compare graph metrics between patients and controls
 result_gm_patcon = zeros(4,length(sparsities));
