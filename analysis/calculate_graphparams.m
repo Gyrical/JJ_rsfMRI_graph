@@ -13,18 +13,21 @@
 %         preCGcc=cluster coefficient of PreCG healthy, 
 %         preCGcb=centrality betweenness of PreCG healthy
 %
-% Note: set PreCG index in line 25 (contralesional index=1, ipsilesional
-% index=116)
+% Note: set PreCG index (contralesional index=1, ipsilesional index=116)
 %
 % Scripts: prune.m
 % Scripts from Brain connectivity toolbox: weight_conversion.m, 
 % distance_wei.m, clustering_coef_wu.m, charpath.m, betweenness_wei.m
 %%
 
-function [cc, cp, preCGcc, preCGcb] = calculate_graphparams(matrix,sparsity)
+function [cc, cp, preCGcc, preCGcb] = calculate_graphparams(matrix,sparsity,idxPreCG)
+
+% Set default parameter values
+if nargin < 3
+    idxPreCG = 1;
+end
 
 % Settings
-idxPreCG = 1;
 n_subj = size(matrix,3);
 
 % Prepare output matrices
@@ -48,7 +51,7 @@ for subj = 1:n_subj
         preCGcc(subj,spars) = cluster_coef(idxPreCG)/mean(cluster_coef);
 
         % Calculate characteristic path with the distance matrix
-        cp(subj,spars) = charpath(conv_matrix);
+%         cp(subj,spars) = charpath(conv_matrix);
         cp(subj,spars) = charpath(conv_matrix,0,0); % >>> Jessica: changed here to ignore Inf pl for disconnected graphs
         
         % Calculate PreCG betweenness centrality with the distance matrix
