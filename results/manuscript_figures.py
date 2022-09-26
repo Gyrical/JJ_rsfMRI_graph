@@ -340,9 +340,108 @@ plt.savefig('fig4_correlations.png', dpi=300,bbox_inches='tight')
 print('fig4_correlations.png saved!')
 plt.show()
 
+
+# %% Graphical abstract
+
+def plot_connectome(ax,meas='cc'):
+    from nilearn import plotting
+    flip = meas=='bc'
+  
+    node_coords_ipsi = [[16,48,0],
+                       [38,35,0],
+                       [12,22,0],
+                       [28,16,0],
+                       [45,15,0],
+                       [18,2,0],
+                       [52,-5,0],
+                       [35,-20,0], # M1
+                       [57,-30,0],
+                       [11,-30,0],
+                       [45,-45,0],
+                       [18,-58,0],
+                       [38,-75,0]]
+    N_ipsi = len(node_coords_ipsi)
+    
+    node_coords_contra = [[-x,y,z] for idx,(x,y,z) in enumerate(node_coords_ipsi) if idx in [0,1,2,9,11,12]] # selected nodes
+    node_coords = np.vstack((node_coords_ipsi,node_coords_contra))
+    N = len(node_coords)
+    # print(f'N nodes: {N}')
+
+    # Define groups and connections
+    nodegroups = {'m1':7, 
+                  'aroundm1':[5,6,8,9,10]}
+    nodeconn = {'bc':{'wholebrain':[(0,2),(1,4),(2,5),(3,4),(4,5),(4,6),(5,7),(7,8),(7,9),(8,10),(10,11),(9,11),(11,12)],
+                      'homotopic':[(0,N_ipsi),(1,N_ipsi+1),(2,N_ipsi+2),(9,N_ipsi+3),(11,N_ipsi+4)],
+                      'ipsilesional':[(0,2),(3,5)]},
+                'cc': {'wholebrain':[(0,2),(1,4),(2,5),(3,4),(4,5),(4,6),(5,7),(7,8),(7,9),(8,10),(10,11),(9,11),(11,12)],
+                       'homotopic':[(2,N_ipsi+2)],
+                       'ipsilesional':[(0,2),(1,2),(2,3),(3,4),(3,5),(4,5)]}
+                }
+    
+    node_stroke = [[-35,-10,0]]
+    
+    # Flip nodes
+    if flip: 
+        node_coords = [[-x,y,z] for x,y,z in node_coords]
+        node_stroke *= np.asarray([-1,1,1]) 
     
     
+    # Grey adjacency matrix
+    adjacency_matrix = np.zeros((N,N))
+    # Check sequence
+    # for idxn in range(N-1): adjacency_matrix[idxn,idxn+1] = 1
+    for idxn in nodeconn[meas]['wholebrain']: adjacency_matrix[idxn] = 1
+    for idxn in nodeconn[meas]['homotopic']: adjacency_matrix[idxn] = 1
+    for idxn in nodeconn[meas]['ipsilesional']: adjacency_matrix[idxn[0]+N_ipsi,idxn[1]+N_ipsi] = 1
+    adjacency_matrix += adjacency_matrix.T
     
+    nodeconn_hi = {'bc':[(0,2),(2,5),(5,7),(7,8),(8,10),(10,11),(11,12),
+                                (1,N_ipsi+1),(1,4),(4,5),(7,9),(9,11),
+                                (9,N_ipsi+3),(N_ipsi+3,N_ipsi+5)],
+                   'cc':[(4,5),(4,6),(4,9),(5,6),(5,8),(5,9),(5,10),(6,8),(6,9),(6,10),(8,9),(8,10),(9,10)]}
+    adj_mat_hi = np.zeros((N,N))
+    for idxn in nodeconn_hi[meas]: adj_mat_hi[idxn] = 1
+    adj_mat_hi += adj_mat_hi.T
+    
+    # Display settings
+    node_size = [850 if idx==nodegroups['m1'] else 150 for idx in range(N)]
+    node_mark = 'o'
+    node_color = 'grey'
+    
+    # Plot stuff
+    plotting.plot_connectome(adjacency_matrix=adjacency_matrix, node_coords=node_coords, 
+                             node_size = node_size, node_color=node_color, node_kwargs={'edgecolor':'k','marker':node_mark},
+                             edge_kwargs = {'color':'#090909','alpha':0.65},
+                             display_mode='z', annotate=False,axes=ax)
+    
+    # Show highlghted connections
+    plotting.plot_connectome(adjacency_matrix=adj_mat_hi, node_coords=node_coords, 
+                             node_size = node_size, node_color=node_color, node_kwargs={'edgecolor':'k','marker':node_mark},
+                             edge_kwargs = {'color':'green','alpha':0.75},
+                             display_mode='z', annotate=False,axes=ax)
+    
+    # Show Stroke lesion    
+    plotting.plot_connectome(adjacency_matrix=np.asarray([[1]]), node_coords=node_stroke, 
+                             node_size=6500,node_color=node_color, node_kwargs={'edgecolor':'k','marker':(7,1)},
+                             display_mode='z', annotate=False,axes=ax)
+    
+    # Show markers as nodes
+    if False:
+        plotting.plot_connectome(adjacency_matrix=np.asarray([[1]]), node_coords=node_stroke, 
+                                 node_size=500,node_color='k', node_kwargs={'edgecolor':'k','marker':'$S$'},
+                                 display_mode='z', annotate=False,axes=ax)
+        plotting.plot_connectome(adjacency_matrix=np.asarray([[1]]), node_coords=np.asarray([node_coords[nodegroups['m1']]]),
+                                 node_size=250,node_color='k', node_kwargs={'edgecolor':'k','marker':'$M1$'},
+                                 display_mode='z', annotate=False,axes=ax)
+
+    
+    return ax
+
+
+fig,axes = plt.subplots(1,2,figsize=(10,6))
+plot_connectome(axes[0],'cc')
+plot_connectome(axes[1],'bc')
+plt.show()
     
     
     
