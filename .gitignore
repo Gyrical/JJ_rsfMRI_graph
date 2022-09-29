@@ -1,2 +1,4 @@
 **/*.m~
+results/*.png
+results/*.mat
 
