@@ -43,6 +43,10 @@ for subj = 1:length(fn_controls)
 end
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Calculate network properties
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% Calculate connectivity matrices
 disp('Calculating connectivity...')
 
@@ -60,10 +64,6 @@ end
 
 
 %% Process connectivity matrices
-
-% >>> Jessica: since it's confusing to use the 'normalize_matrix' function
-% when no normalization takes place, I just did the preprocessing here in
-% the main script
 
 % Fisher z-transform
 corr_pat_fi = log((1+corr_pat)./(1-corr_pat))./2;
@@ -113,10 +113,12 @@ else
 
     
     % Save network measures
-    fprintf('Saving data to: %s...\n',fn_data)
+    fprintf('\nSaving data to: %s...\n\n',fn_data)
     save(fn_data,'-struct','data')
 
 end
+
+fprintf('\nFinished calculating network measures!\n\n')
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                      Statistical analyses
@@ -145,21 +147,26 @@ disp(cell2table(result_fc_normality,'VariableNames',{'measure','H','Pval','KSSTA
 
 % Compare all stroke patients to healthy controls
 
-result_fc_patcon = cell(2,2);
+result_fc_patcon = cell(2,5);
 for idxm = 1:2
     meas = measures{idxm};
     pat = data.(strcat(groups{1},'_',meas));
     con = data.(strcat(groups{2},'_',meas));
     
-    [P] = ranksum(pat, con);
-%     % Uncomment to use measure of effect size (under construction)
-%     stats = mes(pat,con,'cles','nBoot',1000); % <<< Jessica: can you please check these settings?
-    
-    result_fc_patcon(idxm,:) = {meas,P};
-    results.(strcat('stats_all_',meas)) = P;
+    % Use measure of effect size
+    stats = mes(pat,con,'cles','nBoot',10000); 
+    P = stats.t.p;
+    E = stats.cles;
+    CI = stats.clesCi;
+
+%     % Use ranksum
+%     [P] = ranksum(pat, con); 
+  
+    result_fc_patcon(idxm,:) = {meas,P,E,CI(1),CI(2)};
+    results.(strcat('stats_all_',meas)) = [P,E,CI(1),CI(2)];
 end
-disp('Wilcoxon rank sum test results patients vs. controls:')
-disp(cell2table(result_fc_patcon,'VariableNames',{'measure','Pval'}))
+disp('CLE test results patients vs. controls:')
+disp(cell2table(result_fc_patcon,'VariableNames',{'measure','Pval','CLES','CIlo','CIhi'}))
 
 
 % Compare stroke subgroups and healthy controls
@@ -169,30 +176,45 @@ GROUP = [GROUP{:}];
 result_fc_anova = cell(2,4);
 for idxm = 1:2
     meas = measures{idxm};
-    % Perform ANOVA
     X = cell2mat(cellfun(@(x) data.(strcat(x,'_',meas)),groups(2:end),'UniformOutput',false)');
+    
+    % Perform ANOVA   
     [P, TAB, STATS] = anova1(X, GROUP,'off'); 
     result_fc_anova(idxm,1:3) = {meas,P,TAB{2,5}};
-    MC = multcompare(STATS);
-        
-%     % Uncomment to use measure of effect size (under construction)
-%     [stats,varargout] = mes1way(X,'group',GROUP,'nBoot',1000);
+    results.(strcat('stats_con_ll_rl_',meas)) = [P,TAB{2,5}];
     
-    % Save results
-    results.(strcat('stats_con_ll_rl_',meas)) = P;
-    for comp = 1:size(MC,1)
-        results.(sprintf('stats_%s_%s_%s',groups{MC(comp,1)+1},groups{MC(comp,2)+1},meas)) = MC(comp,end);
+    % Perform pairwise compairsons
+    
+%     % Use anova multcompare 
+%     MC = multcompare(STATS);
+%     for comp = 1:size(MC,1)
+%         results.(sprintf('stats_%s_%s_%s',groups{MC(comp,1)+1},groups{MC(comp,2)+1},meas)) = MC(comp,end);
+%     end
+%     if P < 0.05 
+%         result_fc_anova(idxm,4) = {MC};
+%     end
+    
+    % Use measure of effect size
+    groupcomp = [2,3;2,4;3,4];
+    MC = cell(3,6);
+    for idxc = 1:size(groupcomp,1)
+        g1 = groups{groupcomp(idxc,1)}; g2 = groups{groupcomp(idxc,2)};
+        
+        stats = mes(data.(strcat(g1,'_',meas)),data.(strcat(g2,'_',meas)),'cles','nBoot',10000);
+        results.(sprintf('stats_%s_%s_%s',g1,g2,meas)) = [stats.t.p,stats.cles,stats.clesCi(1),stats.clesCi(2)];
+        MC(idxc,:) = {g1,g2,stats.t.p,stats.cles,stats.clesCi(1),stats.clesCi(2)};
     end
-    if P < 0.05 
-        result_fc_anova(idxm,4) = {MC};
-    end
+    result_fc_anova(idxm,4) = {MC};
 end
-disp('One-way ANOVA test results patients LL vs. RL vs. controls:')
+
+disp('One-way ANOVA test results patients LL vs. RL vs. CONTROLS:')
 disp(cell2table(result_fc_anova(:,1:3),'VariableNames',{'measure','Pval','F'}))
+
 for idxm = 1:2
     if not(isempty(result_fc_anova{idxm,4}))
         disp(['Pairwise comparisons for: ',result_fc_anova{idxm,1}]);
-        disp(array2table(result_fc_anova{idxm,4},'VariableNames',{'G1','G2','Lowerlimit','Difference','Upperlimit','Pvalue'})); 
+%         disp(array2table(result_fc_anova{idxm,4},'VariableNames',{'G1','G2','Lowerlimit','Difference','Upperlimit','Pvalue'})); 
+    disp(array2table(result_fc_anova{idxm,4},'VariableNames',{'G1','G2','Pvalue','CLES','CIlo','CIhi'})); 
     end
 end
 
@@ -202,52 +224,88 @@ end
 
 % Compare graph metrics between patients and controls
 
-result_gm_patcon = zeros(4,length(sparsities));
+result_gm_patcon = cell(4,length(sparsities));
 for idxm = 3:length(measures)
     meas = measures{idxm};
     pat = data.(strcat(groups{1},'_',meas));
     con = data.(strcat(groups{2},'_',meas));
-    plist = zeros(length(sparsities),1);
+    
+%     % Use ranksum
+%     plist = zeros(length(sparsities),1);
+%     for idxs = 1:size(pat,2)
+%         plist(idxs) = ranksum(pat(:,idxs), con(:,idxs));
+%     end
+%     result_gm_patcon(idxm-2,:) = {plist};
+
+    % Use CLES
+    plist = zeros(length(sparsities),4);
     for idxs = 1:size(pat,2)
-        plist(idxs) = ranksum(pat(:,idxs), con(:,idxs));
+        stats = mes(pat(:,idxs),con(:,idxs),'cles','nBoot',10000); 
+        plist(idxs,:) = [stats.t.p,stats.cles,stats.clesCi(1),stats.clesCi(2)];
     end
-    result_gm_patcon(idxm-2,:) = plist;
+    
     results.(strcat('stats_all_',meas)) = plist;
+    disp([meas,' patients vs. controls (per sparsity level):'])
+    disp(array2table(plist,'VariableNames',{'Pvalue','CLES','CIlo','CIhi'}, 'RowNames', cellstr(string(sparsities))))
 end
-disp('Wilcoxon rank sum test results patients vs. controls (per sparsity level):')
-disp(array2table(result_gm_patcon','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
+
+% disp('CLES test results patients vs. controls (per sparsity level):')
+% disp(array2table(result_gm_patcon','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
 
 
-% Compare stroke subgroups and healthy controls
+%% Compare stroke subgroups and healthy controls
 
 GROUP = cellfun(@(x) repmat({x},1,length(data.(strcat(x,'_fch')))),groups(2:end),'UniformOutput',false);
 GROUP = [GROUP{:}];
-result_gm_anova = zeros(4,length(sparsities));
+result_gm_anova = cell(4,length(sparsities),2);
 
 for idxm = 3:length(measures)
     meas = measures{idxm};
-    plist = zeros(length(sparsities),1);
-    mclist = zeros(length(sparsities),3);
+    plist = zeros(length(sparsities),2);
+    mclist = cell(3,length(sparsities),6);
     
     for idxs = 1:length(sparsities)
-        X = cell2mat(cellfun(@(x) data.(strcat(x,'_',measures{idxm}))(:,idxs), groups(2:end),'UniformOutput',false)');
+        X = cell2mat(cellfun(@(x) data.(strcat(x,'_',meas))(:,idxs), groups(2:end),'UniformOutput',false)');
         [P, TAB, STATS] = anova1(X, GROUP,'off'); 
-        MC = multcompare(STATS);
+        plist(idxs,:)=[P,TAB{2,5}];
         
-        plist(idxs)=P;
-        mclist(idxs,:) = MC(:,end);
+%         % Use anova multcompare
+%         MC = multcompare(STATS);
+%         mclist(idxs,:) = MC(:,end);
+%         result_fc_anova(idxm,4) = {MC};
+        
+        % Use measure of effect size
+        groupcomp = [2,3;2,4;3,4];
+        MC = cell(3,6);
+        for idxc = 1:size(groupcomp,1)
+            g1 = groups{groupcomp(idxc,1)}; g2 = groups{groupcomp(idxc,2)};
+
+            stats = mes(data.(strcat(g1,'_',meas))(:,idxs),data.(strcat(g2,'_',meas))(:,idxs),'cles','nBoot',10000);
+            mclist(idxc,idxs,:) = {g1,g2,stats.t.p,stats.cles,stats.clesCi(1),stats.clesCi(2)};
+            
+        end
     end
     
-    result_gm_anova(idxm-2,:) = plist;
+    result_gm_anova(idxm-2,:,:) = num2cell(plist);
     results.(strcat('stats_con_ll_rl_',meas)) = plist;
-    results.(strcat('stats_con_ll_',meas)) = mclist(:,1);
-    results.(strcat('stats_con_rl_',meas)) = mclist(:,2);
-    results.(strcat('stats_ll_rl_',meas)) = mclist(:,3);
-
+    for idxc = 1:3
+        results.(sprintf('stats_%s_%s_%s',mclist{idxc,1,1},mclist{idxc,1,2},meas)) = cell2mat(squeeze(mclist(idxc,:,3:end)));
+    end
+    
 end
-disp('One-way ANOVA test results patients LL vs. RL vs. controls (per sparsity level):')
-disp(array2table(result_gm_anova','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
 
+disp('One-way ANOVA test results patients LL vs. RL vs. controls (per sparsity level):')
+disp('P-values')
+disp(array2table(result_gm_anova(:,:,1)','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
+disp('F-stat')
+disp(array2table(result_gm_anova(:,:,2)','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
+
+for idxm = 3:length(measures)
+    disp([meas,' CLES pairwise comparisons (per sparsity level):'])
+    for idxc = 1:3
+        disp(array2table(squeeze(mclist(idxc,:,:)),'VariableNames',{'G1','G2','Pvalue','CLES','CIlo','CIhi'}, 'RowNames', cellstr(string(sparsities))))
+    end
+end
 
 %% Correlations with lesion size
 
@@ -260,22 +318,47 @@ for idxm = 1:length(measures)
         results.(strcat('stats_lesionsize_',meas))(idxs,:) = [R(1,2),P(1,2)];
     end
 end
-disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))},measures(1:2))'),'RowNames',measures(1:2),'VariableNames',{'R','P'}))
+disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))},measures(1:2))'),...
+    'RowNames',measures(1:2),'VariableNames',{'R','P'}))
 disp('R per sparsity level:')
-disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,1)}, measures(3:end))),'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
+disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,1)}, measures(3:end))),...
+    'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
 disp('p per sparsity level:')
-disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,2)}, measures(3:end))),'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
+disp(array2table(cell2mat(cellfun(@(x) {results.(strcat('stats_lesionsize_',x))(:,2)}, measures(3:end))),...
+    'VariableNames',measures(3:end),'RowNames', cellstr(string(sparsities))))
 
 
 %% Save results
 
+% Save arrays to mat for visualization script
 fprintf('Saving results to: %s...\n',fn_stats)
 save(fn_stats,'-struct','results')
 
+% Save Table to xlsx
+res_gm = {}; res_fc = {};
+fnres = fieldnames(results);
 
+for idxr = 1:length(fnres)
+    if contains(fnres{idxr},'lesionsize')
+        colnames = {'R','P'};
+    elseif size(results.(fnres{idxr}),2)==4
+        colnames = {'P','CLES','CIlo','CIhi'};
+    elseif size(results.(fnres{idxr}),2)==2
+        colnames = {'P','F'};
+    end
+    colnames = cellfun(@(x) [fnres{idxr},'_',x],colnames,'UniformOutput',false);
+    
+    if size(results.(fnres{idxr}),1)==17
+        res_gm(end+1) = {array2table(results.(fnres{idxr}),'VariableNames',colnames,'RowNames',cellstr(string(sparsities)))};
+    else
+        res_fc(end+1) = {array2table(results.(fnres{idxr}),'VariableNames',colnames)};
+    end
+    
+end
 
+writetable(horzcat(res_gm{:}), [fn_stats(1:end-3),'xlsx'],'WriteRowNames',true,'Sheet','Sheet1')
+writetable(horzcat(res_fc{:}), [fn_stats(1:end-3),'xlsx'],'Sheet','Sheet2')
 
-
-
+fprintf('\n***** Results saved to %sxlsx! *****\n\n',fn_stats(1:end-3))
 
 

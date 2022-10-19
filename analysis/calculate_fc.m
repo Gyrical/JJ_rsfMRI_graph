@@ -30,8 +30,7 @@ n_subj = size(X,3);
 fcwb = zeros(n_subj,1);
 for subj = 1:n_subj
     mat = X(:,:,subj);
-%     fcwb(subj) = mean(mat(tril(ones(n_nodes),-1)==1)); % >>> Jessica: changed the code here to also include non-diagonal zeros in the lower triangle
-    fcwb(subj) = mean(mat(mat>0)); % Old version
+    fcwb(subj) = mean(mat(mat>0)); 
 end
 
 % Average FC between homotopic regions

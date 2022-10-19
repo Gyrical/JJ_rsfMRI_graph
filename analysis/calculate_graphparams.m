@@ -51,8 +51,7 @@ for subj = 1:n_subj
         preCGcc(subj,spars) = cluster_coef(idxPreCG)/mean(cluster_coef);
 
         % Calculate characteristic path with the distance matrix
-%         cp(subj,spars) = charpath(conv_matrix);
-        cp(subj,spars) = charpath(conv_matrix,0,0); % >>> Jessica: changed here to ignore Inf pl for disconnected graphs
+        cp(subj,spars) = charpath(conv_matrix,0,0);
         
         % Calculate PreCG betweenness centrality with the distance matrix
         cb = betweenness_wei(conv_matrix);

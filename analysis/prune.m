@@ -14,7 +14,7 @@
       
 function [pruned_matrix,t] = prune(matrix, sparse)
 N = size(matrix,1);
-t = round((1-sparse) * (N^2-N) * .5); % >>> Jessica: changed code here to only consider number of nodes in the lower triangle
+t = round((1-sparse) * (N^2-N) * .5); 
 pruned_matrix = zeros(size(matrix));
 
 for subj = 1:size(matrix,3)
