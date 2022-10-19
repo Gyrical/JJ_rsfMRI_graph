@@ -50,7 +50,7 @@ sstats = True
 
 #%% Fig 2 (2-3) Combined SP vs. HC
     
-statsm = [['*' if p < alpha else '' for p in Dstats['stats_all_'+x].flatten()] for x in measl[:4]]
+statsm = [['*' if p < alpha else '' for p in Dstats['stats_all_'+x][:,0]] for x in measl[:4]]
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
 for idxm,labm in enumerate(measl):
@@ -118,7 +118,7 @@ for idxm,labm in enumerate(measl):
             ax.plot([idx+1,idx+1],qmq[idx,(1,2)],color='k',label='_nolegend_') #pltcolors[idx]
         
         # Show stats markers
-        if sstats and Dstats['stats_all_'+labm] < alpha:
+        if sstats and Dstats['stats_all_'+labm][:,0] < alpha:
             xls,yls = ax.get_xlim(), ax.get_ylim()
             yls = [yls[0],yls[1]*1.022]
             ax.set_ylim(top = yls[1])
@@ -153,7 +153,7 @@ plt.show()
 #%% Figure 3 (4-5) combined LL vs. RL vs. HC
 
 slabs = ['$LL ≠ RL$','$LL ≠ HC$','$RL ≠ HC$']
-statsma = [[['*' if x < alpha else '' for x in Dstats['stats_{}_{}'.format(xx,yy)]] 
+statsma = [[['*' if x < alpha else '' for x in Dstats['stats_{}_{}'.format(xx,yy)][:,0]] 
                for xx in 'll_rl con_ll con_rl'.split()] for yy in measl[:4]] # else '^' if x<.1 
 
 fig,axes = plt.subplots(3,2,figsize=(10,9))
@@ -217,20 +217,20 @@ for idxm,labm in enumerate(measl):
         for idx in x: ax.plot([idx,idx],qmq[idx-1,(1,2)].flatten(),color='k',label='_nolegend_')
             
         xls,yls = ax.get_xlim(), ax.get_ylim()
-        if Dstats['stats_con_ll_rl_'+labm]<alpha:
+        if Dstats['stats_con_ll_rl_'+labm][:,0]<alpha:
             yls = [yls[0],yls[1]*1.022]
             ax.set_ylim(top = yls[1])
             esc = np.diff(yls)*0.07
             el = (np.ones((2,))*np.diff(yls)*0.02,np.zeros((2,)))
             
-            if Dstats['stats_con_rl_'+labm] < alpha:
+            if Dstats['stats_con_rl_'+labm][:,0] < alpha:
                 ax.errorbar([1,3],np.ones((2,))*yls[1],el,color='k')
                 ax.text(2,yls[1],'*',ha='center',va='baseline',fontsize=14)
 
-            if Dstats['stats_con_ll_'+labm] < alpha:          
+            if Dstats['stats_con_ll_'+labm][:,0] < alpha:          
                 ax.errorbar([1,1.9],np.ones((2,))*yls[1]-esc,el,color='k')
                 ax.text(1.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
-            if Dstats['stats_ll_rl_'+labm] < alpha:
+            if Dstats['stats_ll_rl_'+labm][:,0] < alpha:
                 ax.errorbar([2.1,3],np.ones((2,))*yls[1]-esc,el,color='k')
                 ax.text(2.5,yls[1]-esc,'*',ha='center',va='baseline',fontsize=14)
             
