@@ -15,5 +15,6 @@ Content:
  - analysis
    - Custom MATLAB script for calculating connectivity and graph metrics, and performing statistics
    - Custom functions
+   - Functions from the MES toolbox (https://github.com/hhentschke/measures-of-effect-size-toolbox)
  - results
    - python script for visualizations
