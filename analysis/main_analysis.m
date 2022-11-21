@@ -111,6 +111,8 @@ else
         data.(strcat('rl_',meas)) = data.(strcat('pat_',meas))(rl_idx,:);
     end
 
+    data.lesionsize = lesionsize';
+    
     
     % Save network measures
     fprintf('\nSaving data to: %s...\n\n',fn_data)
@@ -119,6 +121,18 @@ else
 end
 
 fprintf('\nFinished calculating network measures!\n\n')
+
+%% Check data
+dfn = fieldnames(data);
+clc
+for i = 1:length(dfn)
+    if size(data.(dfn{i}),2) == 1
+        fprintf('%s\t%.2f\t%.2f\n',dfn{i},mean(data.(dfn{i})),std(data.(dfn{i})))
+    else
+        disp(dfn{i})
+        disp([mean(data.(dfn{i}))',std(data.(dfn{i}))'])
+    end
+end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%                      Statistical analyses
@@ -292,6 +306,10 @@ for idxm = 3:length(measures)
         results.(sprintf('stats_%s_%s_%s',mclist{idxc,1,1},mclist{idxc,1,2},meas)) = cell2mat(squeeze(mclist(idxc,:,3:end)));
     end
     
+    disp([meas,' CLES pairwise comparisons (per sparsity level):'])
+    for idxc = 1:3
+        disp(array2table(squeeze(mclist(idxc,:,:)),'VariableNames',{'G1','G2','Pvalue','CLES','CIlo','CIhi'}, 'RowNames', cellstr(string(sparsities))))
+    end
 end
 
 disp('One-way ANOVA test results patients LL vs. RL vs. controls (per sparsity level):')
@@ -300,12 +318,6 @@ disp(array2table(result_gm_anova(:,:,1)','VariableNames',measures(3:end), 'RowNa
 disp('F-stat')
 disp(array2table(result_gm_anova(:,:,2)','VariableNames',measures(3:end), 'RowNames', cellstr(string(sparsities))))
 
-for idxm = 3:length(measures)
-    disp([meas,' CLES pairwise comparisons (per sparsity level):'])
-    for idxc = 1:3
-        disp(array2table(squeeze(mclist(idxc,:,:)),'VariableNames',{'G1','G2','Pvalue','CLES','CIlo','CIhi'}, 'RowNames', cellstr(string(sparsities))))
-    end
-end
 
 %% Correlations with lesion size
 

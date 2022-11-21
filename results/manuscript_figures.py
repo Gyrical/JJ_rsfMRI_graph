@@ -263,7 +263,7 @@ import re
 if 1:
     # Option 1: show single sparsity
 
-    spars = 0.75
+    spars = 0.4#0.75
     
     fig,axes = plt.subplots(3,2,figsize=(8,9))
     
@@ -287,7 +287,10 @@ if 1:
         if sstats:
             filt = ~np.isnan(np.vstack((lesionsize,data))).any(axis=0)
             r,p = pearsonr(lesionsize[filt],data[filt])
-            tstr = re.sub('0(?=[.])','','$r = {:.2f}, p = {:.3f}$'.format(r,p))
+            if p < 0.001:
+                tstr = re.sub('0(?=[.])','','$r = {:.2f}, p < .001$'.format(r))
+            else:
+                tstr = re.sub('0(?=[.])','','$r = {:.2f}, p = {:.3f}$'.format(r,p))
             if p < 0.05: tstr += '*'
             ax.text(xls[1]-np.diff(xls)*0.1,yls[1]-np.diff(yls)*0.15,tstr,ha='right',va='bottom',fontsize=8)
             
@@ -438,10 +441,10 @@ def plot_connectome(ax,meas='cc'):
     return ax
 
 
-fig,axes = plt.subplots(1,2,figsize=(10,6))
-plot_connectome(axes[0],'cc')
-plot_connectome(axes[1],'bc')
-plt.show()
+# fig,axes = plt.subplots(1,2,figsize=(10,6))
+# plot_connectome(axes[0],'cc')
+# plot_connectome(axes[1],'bc')
+# plt.show()
     
     
     
